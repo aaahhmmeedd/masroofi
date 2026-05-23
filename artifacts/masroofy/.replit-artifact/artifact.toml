@@ -1,18 +1,16 @@
 kind = "mobile"
-previewPath = "/masroofy/"
+previewPath = "/"
 title = "مصروفي"
 version = "1.0.0"
 id = "artifacts/masroofy"
-router = "expo-domain"
 
 [[integratedSkills]]
 name = "expo"
 version = "1.0.0"
 
 [[services]]
-ensurePreviewReachable = "/status"
 name = "expo"
-paths = [ "/masroofy/" ]
+paths = [ "/" ]
 localPort = 18402
 
 [services.development]
@@ -24,4 +22,4 @@ run = [ "pnpm", "--filter", "@workspace/masroofy", "run", "serve" ]
 
 [services.env]
 PORT = "18402"
-BASE_PATH = "/masroofy/"
+BASE_PATH = "/"
