@@ -30,12 +30,23 @@ export interface Vault {
 
 export interface Transaction {
   id: string;
-  type: "expense" | "vault_deposit" | "savings_add" | "income" | "month_ended" | "store_to_vault";
+  type:
+    | "expense"
+    | "vault_deposit"
+    | "savings_add"
+    | "income"
+    | "month_ended"
+    | "store_to_vault"
+    | "debt_given"
+    | "debt_repaid_out"
+    | "debt_borrowed"
+    | "debt_received_back";
   name: string;
   amount: number;
   source: string;
   monthId?: string;
   vaultId?: string;
+  debtId?: string;
   createdAt: number;
 }
 

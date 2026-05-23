@@ -45,12 +45,16 @@ function ProgressCircle({ pct, C }: { pct: number; C: any }) {
 
 function TransactionIcon({ type, C }: { type: Transaction["type"]; C: any }) {
   const cfg: Record<string, { icon: string; color: string }> = {
-    expense: { icon: "minus-circle", color: C.danger },
-    income: { icon: "plus-circle", color: C.success },
-    vault_deposit: { icon: "archive", color: C.tint },
-    savings_add: { icon: "pocket", color: C.tint },
-    store_to_vault: { icon: "archive", color: C.navy },
-    month_ended: { icon: "check-circle", color: C.successDark },
+    expense:            { icon: "minus-circle",   color: C.danger },
+    income:             { icon: "plus-circle",    color: C.success },
+    vault_deposit:      { icon: "archive",        color: C.tint },
+    savings_add:        { icon: "pocket",         color: C.tint },
+    store_to_vault:     { icon: "archive",        color: C.navy },
+    month_ended:        { icon: "check-circle",   color: C.successDark },
+    debt_given:         { icon: "user-minus",     color: C.warning },
+    debt_repaid_out:    { icon: "user-check",     color: C.tint },
+    debt_borrowed:      { icon: "user-plus",      color: C.warning },
+    debt_received_back: { icon: "user-check",     color: C.success },
   };
   const c = cfg[type] || { icon: "circle", color: C.textMuted };
   return <Feather name={c.icon as any} size={16} color={c.color} />;
@@ -338,8 +342,14 @@ export default function MonthDetailScreen() {
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 4 }}>
-                <Text style={[styles.txAmount, { color: tx.type === "expense" ? C.danger : tx.type === "income" ? C.success : C.tint }]}>
-                  {tx.type === "expense" ? "-" : "+"}{fc(tx.amount)}
+                <Text style={[styles.txAmount, {
+                  color: (tx.type === "expense" || tx.type === "debt_given" || tx.type === "debt_repaid_out")
+                    ? C.danger
+                    : (tx.type === "income" || tx.type === "debt_received_back" || tx.type === "debt_borrowed")
+                    ? C.success
+                    : C.tint
+                }]}>
+                  {(tx.type === "expense" || tx.type === "debt_given" || tx.type === "debt_repaid_out") ? "-" : "+"}{fc(tx.amount)}
                 </Text>
                 {tx.type !== "month_ended" && !month.isEnded && (
                   <Pressable onPress={() => handleDeleteTransaction(tx.id)} style={[styles.txDeleteBtn, { backgroundColor: C.danger + "15" }]}>

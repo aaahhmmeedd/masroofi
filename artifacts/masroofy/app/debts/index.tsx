@@ -31,6 +31,7 @@ function DebtCard({
   C: any;
   fc: (n: number) => string;
   onPay: (id: string, amount: number) => Promise<void>;
+  onDelete?: never;
 }) {
   const [paying, setPaying] = useState(false);
   const [payAmount, setPayAmount] = useState("");

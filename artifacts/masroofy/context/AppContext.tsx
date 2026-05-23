@@ -200,7 +200,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .filter((e) => e.monthId === monthId && e.source === "budget")
         .reduce((s, e) => s + e.amount, 0);
       const incomeForMonth = data.transactions
-        .filter((t) => t.monthId === monthId && t.type === "income")
+        .filter((t) => t.monthId === monthId && (t.type === "income" || t.type === "debt_borrowed" || t.type === "debt_received_back"))
         .reduce((s, t) => s + t.amount, 0);
       const totalAvailable = month.budget + incomeForMonth;
       const remaining = Math.max(0, totalAvailable - budgetExpenses);
@@ -322,7 +322,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const external = incomeTxs.filter((t) => t.source === "external").reduce((s, t) => s + t.amount, 0);
       const vault = incomeTxs.filter((t) => t.source === "vault").reduce((s, t) => s + t.amount, 0);
       const liquidity = incomeTxs.filter((t) => t.source === "liquidity").reduce((s, t) => s + t.amount, 0);
-      return { external, vault, liquidity, total: external + vault + liquidity };
+      const debtIncome = data.transactions
+        .filter((t) => t.monthId === monthId && (t.type === "debt_borrowed" || t.type === "debt_received_back"))
+        .reduce((s, t) => s + t.amount, 0);
+      return { external, vault, liquidity, total: external + vault + liquidity + debtIncome };
     },
     [data.transactions]
   );
@@ -794,7 +797,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .filter((e) => e.monthId === activeMonth.id && e.source === "budget")
           .reduce((s, e) => s + e.amount, 0);
         const incomeTotal = data.transactions
-          .filter((t) => t.monthId === activeMonth.id && t.type === "income")
+          .filter((t) => t.monthId === activeMonth.id && (t.type === "income" || t.type === "debt_borrowed" || t.type === "debt_received_back"))
           .reduce((s, t) => s + t.amount, 0);
         const available = activeMonth.budget + incomeTotal - budgetSpent;
         if (available < amount) {
@@ -806,9 +809,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           source: "budget", category: "ديون", createdAt: now,
         };
         const tx: Transaction = {
-          id: generateId(), type: "expense",
+          id: generateId(), type: "debt_repaid_out",
           name: `تسديد دين - ${debt.name}`, amount,
-          source: "budget", monthId: activeMonth.id, createdAt: now,
+          source: "budget", monthId: activeMonth.id, debtId, createdAt: now,
         };
         await saveData({
           ...data,
@@ -820,9 +823,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       } else {
         const tx: Transaction = {
-          id: generateId(), type: "income",
+          id: generateId(), type: "debt_received_back",
           name: `استلام دين - ${debt.name}`, amount,
-          source: "external", monthId: activeMonth.id, createdAt: now,
+          source: "external", monthId: activeMonth.id, debtId, createdAt: now,
         };
         await saveData({
           ...data,
@@ -840,18 +843,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const lendMoneyInMonth = useCallback(
     async (monthId: string, amount: number, personName: string, category: string) => {
       const now = Date.now();
+      const debtId = generateId();
       const newExpense: Expense = {
         id: generateId(), monthId,
         name: `دين لـ${personName}`, amount,
         source: "budget", category, createdAt: now,
       };
       const tx: Transaction = {
-        id: generateId(), type: "expense",
+        id: generateId(), type: "debt_given",
         name: `دين لـ${personName}`, amount,
-        source: "budget", monthId, createdAt: now,
+        source: "budget", monthId, debtId, createdAt: now,
       };
       const newDebt: Debt = {
-        id: generateId(), name: personName, amount, remaining: amount,
+        id: debtId, name: personName, amount, remaining: amount,
         type: "owed_to_me", note: "مرتبط بشهر", createdAt: now, isPaid: false,
       };
       await saveData({
@@ -876,9 +880,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         source: "budget", category: "ديون", createdAt: now,
       };
       const tx: Transaction = {
-        id: generateId(), type: "expense",
+        id: generateId(), type: "debt_repaid_out",
         name: `تسديد لـ${debtName}`, amount,
-        source: "budget", monthId, createdAt: now,
+        source: "budget", monthId, debtId, createdAt: now,
       };
       let newDebts = data.debts || [];
       if (debtId) {
@@ -905,13 +909,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const borrowMoneyInMonth = useCallback(
     async (monthId: string, amount: number, personName: string) => {
       const now = Date.now();
+      const debtId = generateId();
       const tx: Transaction = {
-        id: generateId(), type: "income",
-        name: `دين من ${personName}`, amount,
-        source: "external", monthId, createdAt: now,
+        id: generateId(), type: "debt_borrowed",
+        name: `اقتراض من ${personName}`, amount,
+        source: "external", monthId, debtId, createdAt: now,
       };
       const newDebt: Debt = {
-        id: generateId(), name: personName, amount, remaining: amount,
+        id: debtId, name: personName, amount, remaining: amount,
         type: "i_owe", note: "مرتبط بشهر", createdAt: now, isPaid: false,
       };
       await saveData({
@@ -930,9 +935,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? ((data.debts || []).find((d) => d.id === debtId)?.name ?? personName ?? "؟")
         : (personName ?? "؟");
       const tx: Transaction = {
-        id: generateId(), type: "income",
+        id: generateId(), type: "debt_received_back",
         name: `رجع دين من ${debtName}`, amount,
-        source: "external", monthId, createdAt: now,
+        source: "external", monthId, debtId, createdAt: now,
       };
       let newDebts = data.debts || [];
       if (debtId) {
@@ -1042,6 +1047,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               ...newData,
               months: data.months.map((m) =>
                 m.id === tx.monthId ? { ...m, isEnded: false, endedAt: undefined } : m
+              ),
+            };
+          }
+          break;
+
+        case "debt_given":
+          newData = {
+            ...newData,
+            expenses: newData.expenses.filter(
+              (e) => !(e.monthId === tx.monthId && e.amount === tx.amount && e.source === "budget" && e.name === tx.name)
+            ),
+          };
+          if (tx.debtId) {
+            newData = {
+              ...newData,
+              debts: (data.debts || []).filter((d) => d.id !== tx.debtId),
+            };
+          }
+          break;
+
+        case "debt_repaid_out":
+          newData = {
+            ...newData,
+            expenses: newData.expenses.filter(
+              (e) => !(e.monthId === tx.monthId && e.amount === tx.amount && e.source === "budget" && e.name === tx.name)
+            ),
+          };
+          if (tx.debtId) {
+            newData = {
+              ...newData,
+              debts: (data.debts || []).map((d) =>
+                d.id === tx.debtId
+                  ? { ...d, remaining: d.remaining + tx.amount, isPaid: false }
+                  : d
+              ),
+            };
+          }
+          break;
+
+        case "debt_borrowed":
+          if (tx.debtId) {
+            newData = {
+              ...newData,
+              debts: (data.debts || []).filter((d) => d.id !== tx.debtId),
+            };
+          }
+          break;
+
+        case "debt_received_back":
+          if (tx.debtId) {
+            newData = {
+              ...newData,
+              debts: (data.debts || []).map((d) =>
+                d.id === tx.debtId
+                  ? { ...d, remaining: d.remaining + tx.amount, isPaid: false }
+                  : d
               ),
             };
           }
