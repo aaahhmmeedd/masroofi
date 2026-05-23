@@ -29,13 +29,14 @@ export default function AddExpenseSheet() {
   const categories = data.categories?.length ? data.categories : ["أخرى"];
   const month = data.months.find((m) => m.id === monthId);
 
-  const [name, setName]           = useState("");
-  const [amount, setAmount]       = useState("");
-  const [source, setSource]       = useState("budget");
-  const [category, setCategory]   = useState(categories[0]);
+  const [name, setName]                   = useState("");
+  const [amount, setAmount]               = useState("");
+  const [source, setSource]               = useState("budget");
+  const [category, setCategory]           = useState(categories[0]);
   const [debtPerson, setDebtPerson]         = useState("");
   const [selectedDebtId, setSelectedDebtId] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [vaultWithdrawId, setVaultWithdrawId] = useState("");
+  const [isLoading, setIsLoading]         = useState(false);
   const saveBtnScale = useRef(new Animated.Value(1)).current;
 
   const animateSaveBtn = () => {
@@ -47,27 +48,30 @@ export default function AddExpenseSheet() {
 
   const curr = fc(0).replace("0", "").trim();
   const isDebt = source === "debt_repaid_mine" || source === "debt_lent";
+  const isVaultWithdraw = source === "vault_withdraw";
   const iOweDebts = (data.debts || []).filter((d) => d.type === "i_owe" && !d.isPaid);
+  const vaultsWithBalance = data.vaults.filter(v => v.balance > 0);
 
-  const budgetSpent   = monthId ? getMonthBudgetUsed(monthId) : 0;
-  const income        = monthId ? getMonthIncome(monthId) : { total: 0, external: 0, vault: 0, liquidity: 0 };
+  const budgetSpent    = monthId ? getMonthBudgetUsed(monthId) : 0;
+  const income         = monthId ? getMonthIncome(monthId) : { total: 0, external: 0, vault: 0, liquidity: 0 };
   const totalAvailable = (month?.budget ?? 0) + income.total;
   const budgetRemaining = totalAvailable - budgetSpent;
+
+  const selectedVault = vaultWithdrawId ? data.vaults.find(v => v.id === vaultWithdrawId) : null;
 
   const getSourceBalance = (id: string) => {
     if (id === "budget") return { label: "متبقي من الميزانية", value: budgetRemaining, isCritical: budgetRemaining < (parseFloat(amount) || 0) };
     if (id === "savings") return { label: "رصيد السيولة", value: data.savings, isCritical: data.savings < (parseFloat(amount) || 0) };
-    const vault = data.vaults.find((v) => v.id === id);
-    if (vault) return { label: `رصيد ${vault.name}`, value: vault.balance, isCritical: vault.balance < (parseFloat(amount) || 0) };
+    if (id === "vault_withdraw" && selectedVault) return { label: `رصيد ${selectedVault.name}`, value: selectedVault.balance, isCritical: selectedVault.balance < (parseFloat(amount) || 0) };
     return null;
   };
 
   const currentBalance = getSourceBalance(source);
 
   const regularSources = [
-    { id: "budget",  label: "الميزانية", icon: "credit-card", hint: `متبقي ${fc(budgetRemaining)}`, accent: C.navy },
-    { id: "savings", label: "السيولة",   icon: "pocket",      hint: `رصيد ${fc(data.savings)}`,    accent: C.navy },
-    ...data.vaults.map((v) => ({ id: v.id, label: v.name, icon: "archive", hint: fc(v.balance), accent: v.color })),
+    { id: "budget",        label: "الميزانية",    icon: "credit-card", hint: `متبقي ${fc(budgetRemaining)}`, accent: C.navy },
+    { id: "savings",       label: "السيولة",      icon: "pocket",      hint: `رصيد ${fc(data.savings)}`,    accent: C.navy },
+    { id: "vault_withdraw",label: "سحب من خزنة", icon: "archive",     hint: "اختر خزنة", accent: C.tint },
   ];
   const debtSources = [
     { id: "debt_repaid_mine", label: "سددت دين",  icon: "user-check", hint: "دفعت دينًا كان عليك", accent: C.tint },
@@ -76,13 +80,16 @@ export default function AddExpenseSheet() {
 
   const activeAccent = isDebt
     ? (source === "debt_repaid_mine" ? C.tint : C.warning)
+    : isVaultWithdraw
+    ? (selectedVault?.color ?? C.tint)
     : (regularSources.find((s) => s.id === source)?.accent ?? C.navy);
 
   const handleSave = async () => {
     const amt = parseFloat(amount);
     if (!amount || amt <= 0) { Alert.alert("خطأ", "يرجى إدخال مبلغ صحيح"); return; }
     if (!monthId)             { Alert.alert("خطأ", "لم يتم تحديد الشهر"); return; }
-    if (!isDebt && !name.trim()) { Alert.alert("خطأ", "يرجى إدخال اسم المصروف"); return; }
+    if (!isDebt && !isVaultWithdraw && !name.trim()) { Alert.alert("خطأ", "يرجى إدخال اسم المصروف"); return; }
+    if (isVaultWithdraw && !vaultWithdrawId) { Alert.alert("خطأ", "يرجى اختيار الخزنة أولاً"); return; }
     if (source === "debt_lent"        && !debtPerson.trim()) { Alert.alert("خطأ", "يرجى إدخال اسم من أعطيته الدين"); return; }
     if (source === "debt_repaid_mine" && !selectedDebtId && !debtPerson.trim()) { Alert.alert("خطأ", "اختر الدين أو أدخل اسم الدائن"); return; }
 
@@ -104,9 +111,11 @@ export default function AddExpenseSheet() {
       await lendMoneyInMonth(monthId, amt, debtPerson.trim(), category);
     } else if (source === "debt_repaid_mine") {
       await repayMyDebtInMonth(monthId, amt, selectedDebtId || undefined, debtPerson.trim() || undefined);
+    } else if (isVaultWithdraw) {
+      const expName = name.trim() || `سحب من ${selectedVault?.name ?? "الخزنة"}`;
+      await addExpense(monthId, expName, amt, "vault", category, vaultWithdrawId);
     } else {
-      const isVault = source !== "budget" && source !== "savings";
-      await addExpense(monthId, name.trim(), amt, isVault ? "vault" : source, category, isVault ? source : undefined);
+      await addExpense(monthId, name.trim(), amt, source as "budget" | "savings", category);
     }
 
     setIsLoading(false);
@@ -132,7 +141,7 @@ export default function AddExpenseSheet() {
             <TextInput
               style={[S.input, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
               value={name} onChangeText={setName}
-              placeholder="مثال: فاتورة الكهرباء"
+              placeholder={isVaultWithdraw ? "اختياري · مثال: شراء تذاكر" : "مثال: فاتورة الكهرباء"}
               placeholderTextColor={C.textMuted} textAlign="right"
               autoFocus={!isDebt}
             />
@@ -168,7 +177,11 @@ export default function AddExpenseSheet() {
             const active = source === s.id;
             return (
               <Pressable key={s.id}
-                onPress={() => { Haptics.selectionAsync(); setSource(s.id); }}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setSource(s.id);
+                  if (s.id !== "vault_withdraw") setVaultWithdrawId("");
+                }}
                 style={[S.sourceCard, { backgroundColor: active ? s.accent + "15" : C.backgroundSecondary, borderColor: active ? s.accent : C.border }]}
               >
                 <Feather name={s.icon as any} size={20} color={active ? s.accent : C.textMuted} />
@@ -179,13 +192,45 @@ export default function AddExpenseSheet() {
           })}
         </View>
 
+        {/* Vault picker — only shown when vault_withdraw is selected */}
+        {isVaultWithdraw && (
+          <>
+            <Text style={[S.label, { color: C.textSecondary }]}>اختر الخزنة</Text>
+            {vaultsWithBalance.length === 0 ? (
+              <View style={[S.emptyVaults, { backgroundColor: C.backgroundSecondary, borderColor: C.border }]}>
+                <Feather name="archive" size={22} color={C.textMuted} />
+                <Text style={[S.emptyVaultsText, { color: C.textMuted }]}>لا توجد خزائن بها رصيد</Text>
+              </View>
+            ) : (
+              <View style={S.vaultCardsGrid}>
+                {vaultsWithBalance.map(v => {
+                  const sel = vaultWithdrawId === v.id;
+                  return (
+                    <Pressable key={v.id}
+                      onPress={() => { Haptics.selectionAsync(); setVaultWithdrawId(v.id); }}
+                      style={[S.vaultCard, { backgroundColor: sel ? v.color + "18" : C.backgroundSecondary, borderColor: sel ? v.color : C.border }]}
+                    >
+                      <View style={[S.vaultDot, { backgroundColor: v.color }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[S.vaultName, { color: sel ? v.color : C.text }]}>{v.name}</Text>
+                        <Text style={[S.vaultBal, { color: C.textMuted }]}>{fc(v.balance)}</Text>
+                      </View>
+                      {sel && <Feather name="check" size={16} color={v.color} />}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        )}
+
         <Text style={[S.sectionDivider, { color: C.textMuted }]}>أو معاملة دين</Text>
         <View style={S.cardsGrid}>
           {debtSources.map((s) => {
             const active = source === s.id;
             return (
               <Pressable key={s.id}
-                onPress={() => { Haptics.selectionAsync(); setSource(s.id); setDebtPerson(""); setSelectedDebtId(""); }}
+                onPress={() => { Haptics.selectionAsync(); setSource(s.id); setDebtPerson(""); setSelectedDebtId(""); setVaultWithdrawId(""); }}
                 style={[S.sourceCard, { backgroundColor: active ? s.accent + "15" : C.backgroundSecondary, borderColor: active ? s.accent : C.border }]}
               >
                 <Feather name={s.icon as any} size={20} color={active ? s.accent : C.textMuted} />
@@ -278,6 +323,13 @@ const S = StyleSheet.create({
   sourceCard:     { width: "47.5%", alignItems: "center", padding: 14, borderRadius: 16, borderWidth: 1.5, gap: 6 },
   cardLabel:      { fontFamily: "Cairo_700Bold", fontSize: 13, textAlign: "center" },
   cardHint:       { fontFamily: "Cairo_400Regular", fontSize: 10, textAlign: "center" },
+  vaultCardsGrid: { gap: 8 },
+  vaultCard:      { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 14, borderWidth: 1.5 },
+  vaultDot:       { width: 10, height: 10, borderRadius: 5 },
+  vaultName:      { fontFamily: "Cairo_600SemiBold", fontSize: 13 },
+  vaultBal:       { fontFamily: "Cairo_400Regular", fontSize: 11, marginTop: 2 },
+  emptyVaults:    { borderRadius: 12, padding: 16, borderWidth: 1, alignItems: "center", gap: 6 },
+  emptyVaultsText:{ fontFamily: "Cairo_400Regular", fontSize: 13, textAlign: "center" },
   chipsRow:       { flexDirection: "row", gap: 8, paddingBottom: 4 },
   personChip:     { alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
   personChipName: { fontFamily: "Cairo_600SemiBold", fontSize: 13 },

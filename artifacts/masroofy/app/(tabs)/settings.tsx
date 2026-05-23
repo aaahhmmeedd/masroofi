@@ -268,6 +268,42 @@ export default function SettingsScreen() {
               />
             }
           />
+          <View style={[styles.divider, { backgroundColor: C.border }]} />
+          <View style={styles.settingRow}>
+            <View style={[styles.settingIcon, { backgroundColor: C.navy + "15" }]}>
+              <Feather name="droplet" size={18} color={C.navy} />
+            </View>
+            <View style={styles.settingText}>
+              <Text style={[styles.settingTitle, { color: C.text }]}>لون التطبيق</Text>
+              <Text style={[styles.settingSubtitle, { color: C.textSecondary }]}>
+                {(data.settings.themeAccent ?? "papyrus") === "papyrus" ? "ورقي · الوضع الكلاسيكي الدافئ" : "فاتح · تصميم نظيف وأبيض"}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.themeAccentRow}>
+            {([
+              { id: "papyrus", label: "ورقي", desc: "دافئ وكلاسيكي" },
+              { id: "clean",   label: "فاتح", desc: "نظيف وحديث" },
+            ] as { id: "papyrus" | "clean"; label: string; desc: string }[]).map((t) => {
+              const active = (data.settings.themeAccent ?? "papyrus") === t.id;
+              return (
+                <Pressable
+                  key={t.id}
+                  onPress={() => { updateSettings({ themeAccent: t.id }); Haptics.selectionAsync(); }}
+                  style={[
+                    styles.themeChip,
+                    {
+                      backgroundColor: active ? C.navy : C.backgroundSecondary,
+                      borderColor: active ? C.navy : C.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.themeChipLabel, { color: active ? C.white : C.text }]}>{t.label}</Text>
+                  <Text style={[styles.themeChipDesc, { color: active ? "rgba(255,255,255,0.75)" : C.textMuted }]}>{t.desc}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* ── العملة ── */}
@@ -509,6 +545,10 @@ const styles = StyleSheet.create({
   miniBtnText: { fontFamily: "Cairo_600SemiBold", fontSize: 14 },
   addRecurringBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 14, borderTopWidth: 1 },
   addRecurringBtnText: { fontFamily: "Cairo_600SemiBold", fontSize: 14 },
+  themeAccentRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingBottom: 16 },
+  themeChip: { flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, gap: 3 },
+  themeChipLabel: { fontFamily: "Cairo_700Bold", fontSize: 14 },
+  themeChipDesc: { fontFamily: "Cairo_400Regular", fontSize: 11 },
   footer: { fontFamily: "Cairo_400Regular", fontSize: 12, textAlign: "center", marginTop: 20, marginBottom: 8 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   modalBox: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 14 },

@@ -28,20 +28,14 @@ export default function AddMonthSheet() {
   const [budget, setBudget] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Quick budget presets based on last month history
-  const lastMonthBudget = data.months.sort((a, b) => {
-    const at = new Date(a.year, a.month - 1).getTime();
-    const bt = new Date(b.year, b.month - 1).getTime();
-    return bt - at;
-  })[0]?.budget ?? 0;
-
-  const presets = lastMonthBudget > 0
-    ? [lastMonthBudget, Math.round(lastMonthBudget * 1.1), Math.round(lastMonthBudget * 0.9)]
-    : [3000, 5000, 8000];
+  const parsedYear = parseInt(year) || now.getFullYear();
 
   const alreadyExists = data.months.some(
-    m => m.month === selectedMonth && m.year === (parseInt(year) || now.getFullYear())
+    m => m.month === selectedMonth && m.year === parsedYear
   );
+
+  const activeMonth = data.months.find(m => !m.isEnded);
+  const hasActiveMonth = !!activeMonth;
 
   const recurringTotal = data.recurringExpenses.reduce((s, r) => s + r.amount, 0);
 
@@ -50,9 +44,15 @@ export default function AddMonthSheet() {
       Alert.alert("خطأ", "يرجى إدخال ميزانية صحيحة");
       return;
     }
-    const parsedYear = parseInt(year) || now.getFullYear();
     if (alreadyExists) {
       Alert.alert("تنبيه", `يوجد شهر ${ARABIC_MONTHS[selectedMonth - 1]} ${parsedYear} بالفعل`);
+      return;
+    }
+    if (hasActiveMonth) {
+      Alert.alert(
+        "يوجد شهر نشط",
+        `يجب إنهاء الشهر الحالي أولاً قبل إنشاء شهر جديد.\n\nالشهر النشط: ${ARABIC_MONTHS[(activeMonth!.month) - 1]} ${activeMonth!.year}`
+      );
       return;
     }
     setIsLoading(true);
@@ -61,6 +61,8 @@ export default function AddMonthSheet() {
     setIsLoading(false);
     router.back();
   };
+
+  const isDisabled = isLoading || alreadyExists || hasActiveMonth;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -79,13 +81,26 @@ export default function AddMonthSheet() {
           </Pressable>
         </View>
 
+        {/* Active month warning */}
+        {hasActiveMonth && (
+          <View style={[styles.warningBox, { backgroundColor: C.warning + "15", borderColor: C.warning + "40" }]}>
+            <Feather name="alert-triangle" size={14} color={C.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.warningTitle, { color: C.warning }]}>يوجد شهر نشط</Text>
+              <Text style={[styles.warningText, { color: C.warning }]}>
+                أنهِ الشهر الحالي ({ARABIC_MONTHS[(activeMonth!.month) - 1]} {activeMonth!.year}) أولاً ثم أضف شهراً جديداً
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Month picker */}
         <Text style={[styles.label, { color: C.textSecondary }]}>الشهر</Text>
         <View style={styles.monthsGrid}>
           {ARABIC_MONTHS.map((name, index) => {
             const m = index + 1;
             const isSelected = selectedMonth === m;
-            const exists = data.months.some(mo => mo.month === m && mo.year === (parseInt(year) || now.getFullYear()));
+            const exists = data.months.some(mo => mo.month === m && mo.year === parsedYear);
             return (
               <Pressable
                 key={m}
@@ -93,7 +108,7 @@ export default function AddMonthSheet() {
                 style={[
                   styles.monthChip,
                   {
-                    backgroundColor: isSelected ? C.navy : exists ? C.backgroundSecondary : C.backgroundSecondary,
+                    backgroundColor: isSelected ? C.navy : C.backgroundSecondary,
                     borderColor: isSelected ? C.navy : exists ? C.border + "80" : C.border,
                     opacity: exists && !isSelected ? 0.5 : 1,
                   },
@@ -124,33 +139,6 @@ export default function AddMonthSheet() {
 
         {/* Budget */}
         <Text style={[styles.label, { color: C.textSecondary }]}>الميزانية الإجمالية</Text>
-
-        {/* Quick presets */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
-          <View style={styles.presetRow}>
-            {presets.map((p, i) => (
-              <Pressable
-                key={i}
-                onPress={() => { Haptics.selectionAsync(); setBudget(String(p)); }}
-                style={[
-                  styles.presetChip,
-                  {
-                    backgroundColor: budget === String(p) ? C.navy + "15" : C.backgroundSecondary,
-                    borderColor: budget === String(p) ? C.navy : C.border,
-                  },
-                ]}
-              >
-                {i === 0 && lastMonthBudget > 0 && (
-                  <Text style={[styles.presetTag, { color: C.tint }]}>نفس السابق</Text>
-                )}
-                <Text style={[styles.presetAmount, { color: budget === String(p) ? C.navy : C.text }]}>
-                  {fc(p)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </ScrollView>
-
         <View style={styles.inputRow}>
           <TextInput
             style={[styles.input, { flex: 1, backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
@@ -160,6 +148,7 @@ export default function AddMonthSheet() {
             placeholder="٠"
             placeholderTextColor={C.textMuted}
             textAlign="right"
+            autoFocus
           />
           <Text style={[styles.currency, { color: C.textSecondary }]}>{fc(0).replace("0", "").trim()}</Text>
         </View>
@@ -214,11 +203,11 @@ export default function AddMonthSheet() {
 
         <Pressable
           onPress={handleSave}
-          disabled={isLoading || alreadyExists}
-          style={[styles.saveBtn, { backgroundColor: alreadyExists ? C.border : C.navy }, (isLoading || alreadyExists) && { opacity: 0.6 }]}
+          disabled={isDisabled}
+          style={[styles.saveBtn, { backgroundColor: isDisabled ? C.border : C.navy }, isDisabled && { opacity: 0.6 }]}
         >
-          <Feather name="plus-circle" size={18} color={alreadyExists ? C.textMuted : C.white} />
-          <Text style={[styles.saveBtnText, { color: alreadyExists ? C.textMuted : C.white }]}>
+          <Feather name="plus-circle" size={18} color={isDisabled ? C.textMuted : C.white} />
+          <Text style={[styles.saveBtnText, { color: isDisabled ? C.textMuted : C.white }]}>
             {isLoading ? "جاري الحفظ..." : "إضافة الشهر"}
           </Text>
         </Pressable>
@@ -239,10 +228,6 @@ const styles = StyleSheet.create({
   input: { borderRadius: 12, padding: 14, fontFamily: "Cairo_400Regular", fontSize: 16, borderWidth: 1, marginBottom: 4 },
   inputRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   currency: { fontFamily: "Cairo_600SemiBold", fontSize: 14 },
-  presetRow: { flexDirection: "row", gap: 8, paddingRight: 4 },
-  presetChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, alignItems: "center", minWidth: 80 },
-  presetTag: { fontFamily: "Cairo_400Regular", fontSize: 10 },
-  presetAmount: { fontFamily: "Cairo_700Bold", fontSize: 13 },
   recurringBox: { marginTop: 16, borderRadius: 14, padding: 14, borderWidth: 1, gap: 6 },
   recurringHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
   recurringTitle: { fontFamily: "Cairo_600SemiBold", fontSize: 13 },
@@ -255,8 +240,9 @@ const styles = StyleSheet.create({
   recurringRemain: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, marginTop: 4, paddingTop: 8 },
   recurringRemainText: { fontFamily: "Cairo_400Regular", fontSize: 12 },
   recurringRemainAmount: { fontFamily: "Cairo_700Bold", fontSize: 13 },
-  warningBox: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, marginTop: 12 },
-  warningText: { fontFamily: "Cairo_400Regular", fontSize: 13, flex: 1 },
+  warningBox: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, marginTop: 12 },
+  warningTitle: { fontFamily: "Cairo_700Bold", fontSize: 13, marginBottom: 2 },
+  warningText: { fontFamily: "Cairo_400Regular", fontSize: 12, flex: 1 },
   saveBtn: { marginTop: 24, borderRadius: 14, padding: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
   saveBtnText: { fontFamily: "Cairo_700Bold", fontSize: 16 },
 });

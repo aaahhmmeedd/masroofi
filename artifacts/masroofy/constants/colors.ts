@@ -1,4 +1,4 @@
-const light = {
+const papyrusLight = {
   text: "#2C1A0E",
   textSecondary: "#7B4D35",
   textMuted: "#B89A82",
@@ -34,7 +34,7 @@ const light = {
   sage: "#A3BFB0",
 };
 
-const dark = {
+const papyrusDark = {
   text: "#EDE5D8",
   textSecondary: "#A89070",
   textMuted: "#6A5848",
@@ -70,6 +70,83 @@ const dark = {
   sage: "#6A9E8E",
 };
 
-export type ThemeColors = typeof light;
+const cleanLight = {
+  text: "#111827",
+  textSecondary: "#4B5563",
+  textMuted: "#9CA3AF",
+  background: "#FFFFFF",
+  backgroundCard: "#F9FAFB",
+  backgroundSecondary: "#F3F4F6",
+  tint: "#1B818F",
+  tintDark: "#156B76",
+  tintLight: "#4DA8B5",
+  navy: "#1B818F",
+  navyMid: "#2A9BAA",
+  navyLight: "#4DB8C5",
+  purple: "#1B818F",
+  purpleLight: "#4DA8B5",
+  purpleDark: "#156B76",
+  success: "#D1FAE5",
+  successDark: "#059669",
+  danger: "#EF4444",
+  warning: "#F59E0B",
+  border: "#E5E7EB",
+  shadow: "rgba(0, 0, 0, 0.06)",
+  tabIconDefault: "#9CA3AF",
+  tabIconSelected: "#1B818F",
+  headerBg: "#1B818F",
+  headerText: "#FFFFFF",
+  cardGradientStart: "#1B818F",
+  cardGradientEnd: "#156B76",
+  overlay: "rgba(0, 0, 0, 0.4)",
+  white: "#FFFFFF",
+  black: "#000000",
+  cream: "#F3F4F6",
+  tan: "#9CA3AF",
+  sage: "#D1FAE5",
+};
 
-export default { light, dark };
+const cleanDark = {
+  text: "#F9FAFB",
+  textSecondary: "#9CA3AF",
+  textMuted: "#6B7280",
+  background: "#0F172A",
+  backgroundCard: "#1E293B",
+  backgroundSecondary: "#273449",
+  tint: "#38BDF8",
+  tintDark: "#0EA5E9",
+  tintLight: "#7DD3FC",
+  navy: "#38BDF8",
+  navyMid: "#7DD3FC",
+  navyLight: "#BAE6FD",
+  purple: "#38BDF8",
+  purpleLight: "#7DD3FC",
+  purpleDark: "#0EA5E9",
+  success: "#22C55E",
+  successDark: "#16A34A",
+  danger: "#EF4444",
+  warning: "#F59E0B",
+  border: "#334155",
+  shadow: "rgba(0, 0, 0, 0.5)",
+  tabIconDefault: "#6B7280",
+  tabIconSelected: "#38BDF8",
+  headerBg: "#1E293B",
+  headerText: "#F9FAFB",
+  cardGradientStart: "#1E293B",
+  cardGradientEnd: "#273449",
+  overlay: "rgba(0, 0, 0, 0.7)",
+  white: "#FFFFFF",
+  black: "#000000",
+  cream: "#273449",
+  tan: "#6B7280",
+  sage: "#22C55E",
+};
+
+export type ThemeColors = typeof papyrusLight;
+
+export default {
+  light: papyrusLight,
+  dark: papyrusDark,
+  cleanLight,
+  cleanDark,
+};

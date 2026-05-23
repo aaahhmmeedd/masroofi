@@ -76,6 +76,7 @@ export interface AppSettings {
   biometricLock: boolean;
   autoMonthManagement: boolean;
   notificationsEnabled: boolean;
+  themeAccent: "papyrus" | "clean";
 }
 
 export interface AppData {

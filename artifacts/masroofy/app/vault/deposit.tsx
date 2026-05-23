@@ -23,7 +23,7 @@ type Mode = "deposit" | "withdraw";
 export default function VaultTransactionSheet() {
   const insets = useSafeAreaInsets();
   const { vaultId, mode: modeParam } = useLocalSearchParams<{ vaultId?: string; mode?: string }>();
-  const { data, colors: C, fc, depositToVault, withdrawFromVault } = useApp();
+  const { data, colors: C, fc, storeToVault, addIncome, getMonthBudgetUsed, getMonthIncome } = useApp();
 
   const [mode, setMode]         = useState<Mode>((modeParam as Mode) || "deposit");
   const [selectedVaultId, setSelectedVaultId] = useState<string>(vaultId || data.vaults[0]?.id || "");
@@ -34,10 +34,25 @@ export default function VaultTransactionSheet() {
   const curr = fc(0).replace("0", "").trim();
   const selectedVault = data.vaults.find(v => v.id === selectedVaultId);
 
+  const activeMonth = data.months
+    .filter(m => !m.isEnded)
+    .sort((a, b) => new Date(b.year, b.month - 1).getTime() - new Date(a.year, a.month - 1).getTime())[0];
+
+  const monthBudgetUsed   = activeMonth ? getMonthBudgetUsed(activeMonth.id) : 0;
+  const monthIncome       = activeMonth ? getMonthIncome(activeMonth.id) : { total: 0, external: 0, vault: 0, liquidity: 0 };
+  const monthBudgetRemaining = activeMonth
+    ? (activeMonth.budget + monthIncome.total) - monthBudgetUsed
+    : 0;
+
   const handleSave = async () => {
     const amt = parseFloat(amount);
     if (!amount || amt <= 0)  { Alert.alert("خطأ", "يرجى إدخال مبلغ صحيح"); return; }
     if (!selectedVaultId)      { Alert.alert("خطأ", "يرجى اختيار خزنة");     return; }
+
+    if (!activeMonth) {
+      Alert.alert("لا يوجد شهر نشط", "يجب إنشاء شهر نشط أولاً من الصفحة الرئيسية قبل التعامل مع الخزنات.");
+      return;
+    }
 
     if (mode === "withdraw") {
       const vault = data.vaults.find(v => v.id === selectedVaultId);
@@ -45,17 +60,25 @@ export default function VaultTransactionSheet() {
         Alert.alert("خطأ", "المبلغ أكبر من رصيد الخزنة"); return;
       }
     }
-    if (mode === "deposit" && amt > data.savings) {
-      Alert.alert("خطأ", "المبلغ أكبر من رصيد السيولة المتاح"); return;
+
+    if (mode === "deposit") {
+      if (amt > monthBudgetRemaining) {
+        Alert.alert(
+          "ميزانية غير كافية",
+          `لا يوجد مال كافٍ في الميزانية (المتبقي: ${fc(monthBudgetRemaining)}).\n\nاذهب إلى الشهر الحالي لتحديد طرق أخرى للتخزين.`
+        );
+        return;
+      }
     }
 
     setIsLoading(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     if (mode === "deposit") {
-      await depositToVault(selectedVaultId, amt, "savings");
+      await storeToVault(activeMonth.id, selectedVaultId, amt);
     } else {
-      await withdrawFromVault(selectedVaultId, amt);
+      const name = withdrawName.trim() || `سحب من ${selectedVault?.name ?? "الخزنة"}`;
+      await addIncome(activeMonth.id, amt, name, "vault", selectedVaultId);
     }
 
     setIsLoading(false);
@@ -100,15 +123,24 @@ export default function VaultTransactionSheet() {
           ))}
         </View>
 
-        {/* Info bar */}
-        <View style={[S.infoBar, { backgroundColor: C.backgroundSecondary, borderColor: C.border }]}>
-          <Feather name="info" size={13} color={C.textMuted} />
-          <Text style={[S.infoText, { color: C.textMuted }]}>
-            {mode === "deposit"
-              ? `السيولة المتاحة: ${fc(data.savings)}`
-              : "سيُعاد المبلغ إلى رصيد السيولة"}
-          </Text>
-        </View>
+        {/* Active month info */}
+        {activeMonth ? (
+          <View style={[S.infoBar, { backgroundColor: C.backgroundSecondary, borderColor: C.border }]}>
+            <Feather name="calendar" size={13} color={C.textMuted} />
+            <Text style={[S.infoText, { color: C.textMuted }]}>
+              {mode === "deposit"
+                ? `متبقي في ميزانية الشهر الحالي: ${fc(monthBudgetRemaining)}`
+                : `سيُضاف للشهر الحالي كدخل`}
+            </Text>
+          </View>
+        ) : (
+          <View style={[S.infoBar, { backgroundColor: C.danger + "12", borderColor: C.danger + "30" }]}>
+            <Feather name="alert-circle" size={13} color={C.danger} />
+            <Text style={[S.infoText, { color: C.danger }]}>
+              لا يوجد شهر نشط · أنشئ شهراً أولاً
+            </Text>
+          </View>
+        )}
 
         {/* Withdraw name */}
         {mode === "withdraw" && (
@@ -144,7 +176,9 @@ export default function VaultTransactionSheet() {
           </View>
         ) : (
           <View style={S.cardsGrid}>
-            {data.vaults.map(v => {
+            {data.vaults
+              .filter(v => mode === "deposit" ? true : v.balance > 0)
+              .map(v => {
               const selected = selectedVaultId === v.id;
               const pct = v.goal > 0 ? Math.min(v.balance / v.goal, 1) : 0;
               return (
@@ -173,8 +207,8 @@ export default function VaultTransactionSheet() {
         {/* Save */}
         <Pressable
           onPress={handleSave}
-          disabled={isLoading || data.vaults.length === 0}
-          style={[S.saveBtn, { backgroundColor: modeColor }, (isLoading || data.vaults.length === 0) && { opacity: 0.5 }]}
+          disabled={isLoading || data.vaults.length === 0 || !activeMonth}
+          style={[S.saveBtn, { backgroundColor: modeColor }, (isLoading || data.vaults.length === 0 || !activeMonth) && { opacity: 0.5 }]}
         >
           <Feather name={mode === "deposit" ? "download" : "upload"} size={18} color="#fff" />
           <Text style={S.saveBtnText}>

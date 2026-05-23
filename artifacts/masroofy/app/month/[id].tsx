@@ -1,9 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   FlatList,
   Modal,
   Platform,
@@ -22,22 +23,40 @@ import { Expense, Transaction } from "@/constants/types";
 import { useApp } from "@/context/AppContext";
 import { notifyBudgetWarning } from "@/services/notifications";
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 function ProgressCircle({ pct, C }: { pct: number; C: any }) {
   const size = 130;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const color = pct > 0.85 ? C.danger : pct > 0.6 ? C.warning : C.success;
+
+  const animPct = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(animPct, {
+      toValue: pct,
+      duration: 900,
+      useNativeDriver: false,
+    }).start();
+  }, [pct]);
+
+  const strokeDashoffset = animPct.interpolate({
+    inputRange: [0, 1],
+    outputRange: [circumference, 0],
+  });
+
   return (
     <View style={styles.circleContainer}>
       <Svg width={size} height={size} style={{ transform: [{ rotate: "-90deg" }] }}>
         <Circle cx={size / 2} cy={size / 2} r={radius} stroke={C.backgroundSecondary} strokeWidth={strokeWidth} fill="none" />
-        <Circle cx={size / 2} cy={size / 2} r={radius} stroke={color} strokeWidth={strokeWidth} fill="none"
-          strokeDasharray={circumference} strokeDashoffset={circumference - pct * circumference} strokeLinecap="round" />
+        <AnimatedCircle cx={size / 2} cy={size / 2} r={radius} stroke={color} strokeWidth={strokeWidth} fill="none"
+          strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
       </Svg>
       <View style={styles.circleInner}>
         <Text style={[styles.circlePercent, { color }]}>{toArabicNumerals(Math.round(pct * 100))}٪</Text>
-        <Text style={[styles.circleLabel, { color: C.textSecondary }]}>مستهلك</Text>
+        <Text style={[styles.circleLabel, { color: C.textSecondary }]}>مصروف</Text>
       </View>
     </View>
   );
@@ -97,6 +116,7 @@ export default function MonthDetailScreen() {
   const totalSpentAll = expenses.reduce((s, e) => s + e.amount, 0);
 
   const handleDeleteExpense = (expenseId: string) => {
+    if (month.isEnded) { Alert.alert("شهر مؤرشف", "لا يمكن تعديل شهر منتهٍ"); return; }
     Alert.alert("حذف المصروف", "هل أنت متأكد؟", [
       { text: "إلغاء", style: "cancel" },
       { text: "حذف", style: "destructive", onPress: () => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); deleteExpense(expenseId); } },
@@ -104,6 +124,7 @@ export default function MonthDetailScreen() {
   };
 
   const handleEditExpense = (expenseId: string) => {
+    if (month.isEnded) { Alert.alert("شهر مؤرشف", "لا يمكن تعديل شهر منتهٍ"); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: "/expense/edit", params: { expenseId } });
   };
@@ -162,6 +183,7 @@ export default function MonthDetailScreen() {
   };
 
   const handleAddExpense = () => {
+    if (month.isEnded) { Alert.alert("شهر مؤرشف", "لا يمكن إضافة مصاريف لشهر منتهٍ"); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({ pathname: "/expense/add", params: { monthId: id } });
     if (pct > 0.8 && data.settings.notificationsEnabled) {
@@ -217,17 +239,32 @@ export default function MonthDetailScreen() {
       </View>
 
       <View style={styles.actionBtns}>
-        <Pressable style={[styles.actionBtn, { backgroundColor: C.backgroundCard, borderColor: C.border }]} onPress={handleAddExpense}>
+        <Pressable
+          style={[styles.actionBtn, { backgroundColor: C.backgroundCard, borderColor: C.border, opacity: month.isEnded ? 0.4 : 1 }]}
+          onPress={handleAddExpense}
+        >
           <Feather name="minus" size={16} color={C.danger} />
           <Text style={[styles.actionBtnText, { color: C.danger }]}>مصروف</Text>
         </Pressable>
-        <Pressable style={[styles.actionBtn, { backgroundColor: C.backgroundCard, borderColor: C.border }]}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push({ pathname: "/income/add", params: { monthId: id } }); }}>
+        <Pressable
+          style={[styles.actionBtn, { backgroundColor: C.backgroundCard, borderColor: C.border, opacity: month.isEnded ? 0.4 : 1 }]}
+          onPress={() => {
+            if (month.isEnded) { Alert.alert("شهر مؤرشف", "لا يمكن إضافة دخل لشهر منتهٍ"); return; }
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push({ pathname: "/income/add", params: { monthId: id } });
+          }}
+        >
           <Feather name="plus" size={16} color={C.success} />
           <Text style={[styles.actionBtnText, { color: C.success }]}>دخل</Text>
         </Pressable>
-        <Pressable style={[styles.actionBtn, { backgroundColor: C.backgroundCard, borderColor: C.border }]}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push({ pathname: "/vault/store", params: { monthId: id } }); }}>
+        <Pressable
+          style={[styles.actionBtn, { backgroundColor: C.backgroundCard, borderColor: C.border, opacity: month.isEnded ? 0.4 : 1 }]}
+          onPress={() => {
+            if (month.isEnded) { Alert.alert("شهر مؤرشف", "لا يمكن التخزين من شهر منتهٍ"); return; }
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push({ pathname: "/vault/store", params: { monthId: id } });
+          }}
+        >
           <Feather name="archive" size={16} color={C.tint} />
           <Text style={[styles.actionBtnText, { color: C.tint }]}>تخزين</Text>
         </Pressable>

@@ -29,6 +29,7 @@ const defaultSettings: AppSettings = {
   biometricLock: false,
   autoMonthManagement: false,
   notificationsEnabled: false,
+  themeAccent: "papyrus",
 };
 
 const defaultData: AppData = {
@@ -141,8 +142,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const colors = useMemo<ThemeColors>(
-    () => (data.settings?.darkMode ? Colors.dark : Colors.light),
-    [data.settings?.darkMode]
+    () => {
+      const accent = data.settings?.themeAccent ?? "papyrus";
+      const isDark = data.settings?.darkMode;
+      if (accent === "clean") return isDark ? Colors.cleanDark : Colors.cleanLight;
+      return isDark ? Colors.dark : Colors.light;
+    },
+    [data.settings?.darkMode, data.settings?.themeAccent]
   );
 
   const fc = useCallback(
@@ -805,12 +811,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         const newExpense: Expense = {
           id: generateId(), monthId: activeMonth.id,
-          name: `تسديد دين - ${debt.name}`, amount,
+          name: `سددت لـ${debt.name}`, amount,
           source: "budget", category: "ديون", createdAt: now,
         };
         const tx: Transaction = {
           id: generateId(), type: "debt_repaid_out",
-          name: `تسديد دين - ${debt.name}`, amount,
+          name: `سددت لـ${debt.name}`, amount,
           source: "budget", monthId: activeMonth.id, debtId, createdAt: now,
         };
         await saveData({
@@ -824,7 +830,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         const tx: Transaction = {
           id: generateId(), type: "debt_received_back",
-          name: `استلام دين - ${debt.name}`, amount,
+          name: `استلمت من ${debt.name}`, amount,
           source: "external", monthId: activeMonth.id, debtId, createdAt: now,
         };
         await saveData({
@@ -846,12 +852,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const debtId = generateId();
       const newExpense: Expense = {
         id: generateId(), monthId,
-        name: `دين لـ${personName}`, amount,
+        name: `أقرضت ${personName}`, amount,
         source: "budget", category, createdAt: now,
       };
       const tx: Transaction = {
         id: generateId(), type: "debt_given",
-        name: `دين لـ${personName}`, amount,
+        name: `أقرضت ${personName}`, amount,
         source: "budget", monthId, debtId, createdAt: now,
       };
       const newDebt: Debt = {
@@ -876,12 +882,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         : (personName ?? "؟");
       const newExpense: Expense = {
         id: generateId(), monthId,
-        name: `تسديد لـ${debtName}`, amount,
+        name: `سددت لـ${debtName}`, amount,
         source: "budget", category: "ديون", createdAt: now,
       };
       const tx: Transaction = {
         id: generateId(), type: "debt_repaid_out",
-        name: `تسديد لـ${debtName}`, amount,
+        name: `سددت لـ${debtName}`, amount,
         source: "budget", monthId, debtId, createdAt: now,
       };
       let newDebts = data.debts || [];
@@ -912,7 +918,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const debtId = generateId();
       const tx: Transaction = {
         id: generateId(), type: "debt_borrowed",
-        name: `اقتراض من ${personName}`, amount,
+        name: `اقترضت من ${personName}`, amount,
         source: "external", monthId, debtId, createdAt: now,
       };
       const newDebt: Debt = {
@@ -936,7 +942,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         : (personName ?? "؟");
       const tx: Transaction = {
         id: generateId(), type: "debt_received_back",
-        name: `رجع دين من ${debtName}`, amount,
+        name: `استلمت من ${debtName}`, amount,
         source: "external", monthId, debtId, createdAt: now,
       };
       let newDebts = data.debts || [];
