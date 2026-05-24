@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "مصروفي",
+    "slug": "masroofy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "masroofy",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#7B4D35"
+    },
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#7B4D35"
+      },
+      "package": "com.almosad.masroofy"
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "node_modules/@expo-google-fonts/cairo/Cairo_400Regular.ttf",
+            "node_modules/@expo-google-fonts/cairo/Cairo_600SemiBold.ttf",
+            "node_modules/@expo-google-fonts/cairo/Cairo_700Bold.ttf",
+            "node_modules/@expo-google-fonts/cairo/Cairo_900Black.ttf"
+          ]
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7ca95a41-b110-44e0-a770-e0f8f7649e2f"
+      }
+    }
+  }
+}
