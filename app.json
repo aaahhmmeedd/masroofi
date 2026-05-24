@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "997a4828-8653-4ca0-9b74-d998b24c1001"
+      }
+    },
+    "android": {
+      "package": "com.masroofi.app"
+    }
+  }
+}
