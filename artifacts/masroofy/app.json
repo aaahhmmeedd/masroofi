@@ -19,7 +19,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#7B4D35"
-      }
+      },
+      "package": "com.almosad.masroofy"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -42,6 +43,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7ca95a41-b110-44e0-a770-e0f8f7649e2f"
+      }
     }
   }
 }
