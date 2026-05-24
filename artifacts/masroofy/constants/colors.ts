@@ -86,7 +86,7 @@ const cleanLight = {
   purple: "#1B818F",
   purpleLight: "#4DA8B5",
   purpleDark: "#156B76",
-  success: "#D1FAE5",
+  success: "#10B981",
   successDark: "#059669",
   danger: "#EF4444",
   warning: "#F59E0B",
@@ -103,7 +103,7 @@ const cleanLight = {
   black: "#000000",
   cream: "#F3F4F6",
   tan: "#9CA3AF",
-  sage: "#D1FAE5",
+  sage: "#10B981",
 };
 
 const cleanDark = {

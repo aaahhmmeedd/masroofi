@@ -123,192 +123,196 @@ export default function AddExpenseSheet() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView
-        contentContainerStyle={[S.container, { paddingBottom: insets.bottom + 20, backgroundColor: C.backgroundCard }]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={S.titleRow}>
-          <Text style={[S.title, { color: C.text }]}>إضافة مصروف</Text>
-          <Pressable onPress={() => router.back()} style={[S.closeBtn, { backgroundColor: C.backgroundSecondary }]}>
-            <Feather name="x" size={20} color={C.textSecondary} />
-          </Pressable>
-        </View>
-
-        {!isDebt && (
-          <>
-            <Text style={[S.label, { color: C.textSecondary }]}>اسم المصروف</Text>
-            <TextInput
-              style={[S.input, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
-              value={name} onChangeText={setName}
-              placeholder={isVaultWithdraw ? "اختياري · مثال: شراء تذاكر" : "مثال: فاتورة الكهرباء"}
-              placeholderTextColor={C.textMuted} textAlign="right"
-              autoFocus={!isDebt}
-            />
-          </>
-        )}
-
-        <Text style={[S.label, { color: C.textSecondary }]}>المبلغ</Text>
-        <View style={S.amountRow}>
-          <TextInput
-            style={[S.input, { flex: 1, backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
-            value={amount} onChangeText={setAmount}
-            keyboardType="decimal-pad" placeholder="٠" placeholderTextColor={C.textMuted} textAlign="right"
-          />
-          <Text style={[S.currency, { color: C.textSecondary }]}>{curr}</Text>
-        </View>
-
-        {!isDebt && currentBalance && (
-          <View style={[S.balanceBar, {
-            backgroundColor: currentBalance.isCritical ? C.danger + "12" : C.success + "12",
-            borderColor: currentBalance.isCritical ? C.danger + "35" : C.success + "35",
-          }]}>
-            <Feather name={currentBalance.isCritical ? "alert-circle" : "check-circle"} size={12}
-              color={currentBalance.isCritical ? C.danger : C.successDark} />
-            <Text style={[S.balanceBarText, { color: currentBalance.isCritical ? C.danger : C.successDark }]}>
-              {currentBalance.label}: {fc(currentBalance.value)}
-            </Text>
+    <View style={{ flex: 1, backgroundColor: C.backgroundCard }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[S.container, { backgroundColor: C.backgroundCard, paddingTop: insets.top + 8 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={S.titleRow}>
+            <Text style={[S.title, { color: C.text }]}>إضافة مصروف</Text>
+            <Pressable onPress={() => router.back()} style={[S.closeBtn, { backgroundColor: C.backgroundSecondary }]}>
+              <Feather name="x" size={20} color={C.textSecondary} />
+            </Pressable>
           </View>
-        )}
 
-        <Text style={[S.label, { color: C.textSecondary }]}>مصدر المصروف</Text>
-        <View style={S.cardsGrid}>
-          {regularSources.map((s) => {
-            const active = source === s.id;
-            return (
-              <Pressable key={s.id}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setSource(s.id);
-                  if (s.id !== "vault_withdraw") setVaultWithdrawId("");
-                }}
-                style={[S.sourceCard, { backgroundColor: active ? s.accent + "15" : C.backgroundSecondary, borderColor: active ? s.accent : C.border }]}
-              >
-                <Feather name={s.icon as any} size={20} color={active ? s.accent : C.textMuted} />
-                <Text style={[S.cardLabel, { color: active ? s.accent : C.text }]}>{s.label}</Text>
-                <Text style={[S.cardHint, { color: active ? s.accent + "CC" : C.textMuted }]}>{s.hint}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          {!isDebt && (
+            <>
+              <Text style={[S.label, { color: C.textSecondary }]}>اسم المصروف</Text>
+              <TextInput
+                style={[S.input, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
+                value={name} onChangeText={setName}
+                placeholder={isVaultWithdraw ? "اختياري · مثال: شراء تذاكر" : "مثال: فاتورة الكهرباء"}
+                placeholderTextColor={C.textMuted} textAlign="right"
+                autoFocus={!isDebt}
+              />
+            </>
+          )}
 
-        {/* Vault picker — only shown when vault_withdraw is selected */}
-        {isVaultWithdraw && (
-          <>
-            <Text style={[S.label, { color: C.textSecondary }]}>اختر الخزنة</Text>
-            {vaultsWithBalance.length === 0 ? (
-              <View style={[S.emptyVaults, { backgroundColor: C.backgroundSecondary, borderColor: C.border }]}>
-                <Feather name="archive" size={22} color={C.textMuted} />
-                <Text style={[S.emptyVaultsText, { color: C.textMuted }]}>لا توجد خزائن بها رصيد</Text>
-              </View>
-            ) : (
-              <View style={S.vaultCardsGrid}>
-                {vaultsWithBalance.map(v => {
-                  const sel = vaultWithdrawId === v.id;
-                  return (
-                    <Pressable key={v.id}
-                      onPress={() => { Haptics.selectionAsync(); setVaultWithdrawId(v.id); }}
-                      style={[S.vaultCard, { backgroundColor: sel ? v.color + "18" : C.backgroundSecondary, borderColor: sel ? v.color : C.border }]}
+          <Text style={[S.label, { color: C.textSecondary }]}>المبلغ</Text>
+          <View style={S.amountRow}>
+            <TextInput
+              style={[S.input, { flex: 1, backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
+              value={amount} onChangeText={setAmount}
+              keyboardType="decimal-pad" placeholder="٠" placeholderTextColor={C.textMuted} textAlign="right"
+            />
+            <Text style={[S.currency, { color: C.textSecondary }]}>{curr}</Text>
+          </View>
+
+          {!isDebt && currentBalance && (
+            <View style={[S.balanceBar, {
+              backgroundColor: currentBalance.isCritical ? C.danger + "12" : C.success + "12",
+              borderColor: currentBalance.isCritical ? C.danger + "35" : C.success + "35",
+            }]}>
+              <Feather name={currentBalance.isCritical ? "alert-circle" : "check-circle"} size={12}
+                color={currentBalance.isCritical ? C.danger : C.successDark} />
+              <Text style={[S.balanceBarText, { color: currentBalance.isCritical ? C.danger : C.successDark }]}>
+                {currentBalance.label}: {fc(currentBalance.value)}
+              </Text>
+            </View>
+          )}
+
+          <Text style={[S.label, { color: C.textSecondary }]}>مصدر المصروف</Text>
+          <View style={S.cardsGrid}>
+            {regularSources.map((s) => {
+              const active = source === s.id;
+              return (
+                <Pressable key={s.id}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setSource(s.id);
+                    if (s.id !== "vault_withdraw") setVaultWithdrawId("");
+                  }}
+                  style={[S.sourceCard, { backgroundColor: active ? s.accent + "15" : C.backgroundSecondary, borderColor: active ? s.accent : C.border }]}
+                >
+                  <Feather name={s.icon as any} size={20} color={active ? s.accent : C.textMuted} />
+                  <Text style={[S.cardLabel, { color: active ? s.accent : C.text }]}>{s.label}</Text>
+                  <Text style={[S.cardHint, { color: active ? s.accent + "CC" : C.textMuted }]}>{s.hint}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {isVaultWithdraw && (
+            <>
+              <Text style={[S.label, { color: C.textSecondary }]}>اختر الخزنة</Text>
+              {vaultsWithBalance.length === 0 ? (
+                <View style={[S.emptyVaults, { backgroundColor: C.backgroundSecondary, borderColor: C.border }]}>
+                  <Feather name="archive" size={22} color={C.textMuted} />
+                  <Text style={[S.emptyVaultsText, { color: C.textMuted }]}>لا توجد خزائن بها رصيد</Text>
+                </View>
+              ) : (
+                <View style={S.vaultCardsGrid}>
+                  {vaultsWithBalance.map(v => {
+                    const sel = vaultWithdrawId === v.id;
+                    return (
+                      <Pressable key={v.id}
+                        onPress={() => { Haptics.selectionAsync(); setVaultWithdrawId(v.id); }}
+                        style={[S.vaultCard, { backgroundColor: sel ? v.color + "18" : C.backgroundSecondary, borderColor: sel ? v.color : C.border }]}
+                      >
+                        <View style={[S.vaultDot, { backgroundColor: v.color }]} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[S.vaultName, { color: sel ? v.color : C.text }]}>{v.name}</Text>
+                          <Text style={[S.vaultBal, { color: C.textMuted }]}>{fc(v.balance)}</Text>
+                        </View>
+                        {sel && <Feather name="check" size={16} color={v.color} />}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </>
+          )}
+
+          <Text style={[S.sectionDivider, { color: C.textMuted }]}>أو معاملة دين</Text>
+          <View style={S.cardsGrid}>
+            {debtSources.map((s) => {
+              const active = source === s.id;
+              return (
+                <Pressable key={s.id}
+                  onPress={() => { Haptics.selectionAsync(); setSource(s.id); setDebtPerson(""); setSelectedDebtId(""); setVaultWithdrawId(""); }}
+                  style={[S.sourceCard, { backgroundColor: active ? s.accent + "15" : C.backgroundSecondary, borderColor: active ? s.accent : C.border }]}
+                >
+                  <Feather name={s.icon as any} size={20} color={active ? s.accent : C.textMuted} />
+                  <Text style={[S.cardLabel, { color: active ? s.accent : C.text }]}>{s.label}</Text>
+                  <Text style={[S.cardHint, { color: C.textMuted }]}>{s.hint}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {source === "debt_repaid_mine" && (
+            <>
+              <Text style={[S.label, { color: C.textSecondary }]}>لمن سددت الدين؟</Text>
+              {iOweDebts.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={S.chipsRow}>
+                  {iOweDebts.map((d) => (
+                    <Pressable key={d.id}
+                      onPress={() => { Haptics.selectionAsync(); setSelectedDebtId(d.id); setDebtPerson(d.name); }}
+                      style={[S.personChip, { backgroundColor: selectedDebtId === d.id ? C.tint : C.backgroundSecondary, borderColor: selectedDebtId === d.id ? C.tint : C.border }]}
                     >
-                      <View style={[S.vaultDot, { backgroundColor: v.color }]} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[S.vaultName, { color: sel ? v.color : C.text }]}>{v.name}</Text>
-                        <Text style={[S.vaultBal, { color: C.textMuted }]}>{fc(v.balance)}</Text>
-                      </View>
-                      {sel && <Feather name="check" size={16} color={v.color} />}
+                      <Text style={[S.personChipName, { color: selectedDebtId === d.id ? "#fff" : C.text }]}>{d.name}</Text>
+                      <Text style={[S.personChipSub, { color: selectedDebtId === d.id ? "rgba(255,255,255,0.8)" : C.textSecondary }]}>{fc(d.remaining)}</Text>
                     </Pressable>
-                  );
-                })}
-              </View>
-            )}
-          </>
-        )}
+                  ))}
+                </ScrollView>
+              )}
+              <TextInput
+                style={[S.input, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border, marginTop: iOweDebts.length > 0 ? 8 : 0 }]}
+                value={debtPerson}
+                onChangeText={(t) => { setDebtPerson(t); setSelectedDebtId(""); }}
+                placeholder={iOweDebts.length > 0 ? "أو اسم جديد..." : "اسم الدائن"}
+                placeholderTextColor={C.textMuted} textAlign="right"
+              />
+            </>
+          )}
 
-        <Text style={[S.sectionDivider, { color: C.textMuted }]}>أو معاملة دين</Text>
-        <View style={S.cardsGrid}>
-          {debtSources.map((s) => {
-            const active = source === s.id;
-            return (
-              <Pressable key={s.id}
-                onPress={() => { Haptics.selectionAsync(); setSource(s.id); setDebtPerson(""); setSelectedDebtId(""); setVaultWithdrawId(""); }}
-                style={[S.sourceCard, { backgroundColor: active ? s.accent + "15" : C.backgroundSecondary, borderColor: active ? s.accent : C.border }]}
-              >
-                <Feather name={s.icon as any} size={20} color={active ? s.accent : C.textMuted} />
-                <Text style={[S.cardLabel, { color: active ? s.accent : C.text }]}>{s.label}</Text>
-                <Text style={[S.cardHint, { color: C.textMuted }]}>{s.hint}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          {source === "debt_lent" && (
+            <>
+              <Text style={[S.label, { color: C.textSecondary }]}>لمن أعطيت الدين؟</Text>
+              <TextInput
+                style={[S.input, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
+                value={debtPerson} onChangeText={setDebtPerson}
+                placeholder="اسم الشخص" placeholderTextColor={C.textMuted} textAlign="right"
+              />
+            </>
+          )}
 
-        {source === "debt_repaid_mine" && (
-          <>
-            <Text style={[S.label, { color: C.textSecondary }]}>لمن سددت الدين؟</Text>
-            {iOweDebts.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={S.chipsRow}>
-                {iOweDebts.map((d) => (
-                  <Pressable key={d.id}
-                    onPress={() => { Haptics.selectionAsync(); setSelectedDebtId(d.id); setDebtPerson(d.name); }}
-                    style={[S.personChip, { backgroundColor: selectedDebtId === d.id ? C.tint : C.backgroundSecondary, borderColor: selectedDebtId === d.id ? C.tint : C.border }]}
+          {!isDebt && (
+            <>
+              <Text style={[S.label, { color: C.textSecondary }]}>الفئة</Text>
+              <View style={S.categoriesWrap}>
+                {categories.map((cat) => (
+                  <Pressable key={cat}
+                    onPress={() => { Haptics.selectionAsync(); setCategory(cat); }}
+                    style={[S.catChip, { backgroundColor: category === cat ? C.tint : C.backgroundSecondary, borderColor: category === cat ? C.tint : C.border }]}
                   >
-                    <Text style={[S.personChipName, { color: selectedDebtId === d.id ? "#fff" : C.text }]}>{d.name}</Text>
-                    <Text style={[S.personChipSub, { color: selectedDebtId === d.id ? "rgba(255,255,255,0.8)" : C.textSecondary }]}>{fc(d.remaining)}</Text>
+                    <Text style={[S.catChipText, { color: category === cat ? "#fff" : C.textSecondary }]}>{cat}</Text>
                   </Pressable>
                 ))}
-              </ScrollView>
-            )}
-            <TextInput
-              style={[S.input, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border, marginTop: iOweDebts.length > 0 ? 8 : 0 }]}
-              value={debtPerson}
-              onChangeText={(t) => { setDebtPerson(t); setSelectedDebtId(""); }}
-              placeholder={iOweDebts.length > 0 ? "أو اسم جديد..." : "اسم الدائن"}
-              placeholderTextColor={C.textMuted} textAlign="right"
-            />
-          </>
-        )}
+              </View>
+            </>
+          )}
+        </ScrollView>
 
-        {source === "debt_lent" && (
-          <>
-            <Text style={[S.label, { color: C.textSecondary }]}>لمن أعطيت الدين؟</Text>
-            <TextInput
-              style={[S.input, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
-              value={debtPerson} onChangeText={setDebtPerson}
-              placeholder="اسم الشخص" placeholderTextColor={C.textMuted} textAlign="right"
-            />
-          </>
-        )}
-
-        {!isDebt && (
-          <>
-            <Text style={[S.label, { color: C.textSecondary }]}>الفئة</Text>
-            <View style={S.categoriesWrap}>
-              {categories.map((cat) => (
-                <Pressable key={cat}
-                  onPress={() => { Haptics.selectionAsync(); setCategory(cat); }}
-                  style={[S.catChip, { backgroundColor: category === cat ? C.tint : C.backgroundSecondary, borderColor: category === cat ? C.tint : C.border }]}
-                >
-                  <Text style={[S.catChipText, { color: category === cat ? "#fff" : C.textSecondary }]}>{cat}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </>
-        )}
-
-        <Animated.View style={{ transform: [{ scale: saveBtnScale }] }}>
-          <Pressable onPress={handleSave} disabled={isLoading}
-            style={[S.saveBtn, { backgroundColor: activeAccent }, isLoading && { opacity: 0.6 }]}
-          >
-            <Feather name="check-circle" size={18} color="#fff" />
-            <Text style={S.saveBtnText}>{isLoading ? "جاري الحفظ..." : "إضافة المصروف"}</Text>
-          </Pressable>
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <View style={[S.saveBtnContainer, { paddingBottom: Math.max(insets.bottom, 16) + 8, borderTopColor: C.border, backgroundColor: C.backgroundCard }]}>
+          <Animated.View style={{ transform: [{ scale: saveBtnScale }] }}>
+            <Pressable onPress={handleSave} disabled={isLoading}
+              style={[S.saveBtn, { backgroundColor: activeAccent }, isLoading && { opacity: 0.6 }]}
+            >
+              <Feather name="check-circle" size={18} color="#fff" />
+              <Text style={S.saveBtnText}>{isLoading ? "جاري الحفظ..." : "إضافة المصروف"}</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const S = StyleSheet.create({
-  container:      { padding: 24, borderTopLeftRadius: 20, borderTopRightRadius: 20, minHeight: "100%" },
+  container:      { padding: 24, paddingBottom: 16 },
   titleRow:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   title:          { fontFamily: "Cairo_700Bold", fontSize: 20 },
   closeBtn:       { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
@@ -337,6 +341,7 @@ const S = StyleSheet.create({
   categoriesWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   catChip:        { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
   catChipText:    { fontFamily: "Cairo_600SemiBold", fontSize: 12 },
-  saveBtn:        { marginTop: 28, borderRadius: 14, padding: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
+  saveBtnContainer: { paddingHorizontal: 24, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  saveBtn:        { borderRadius: 14, padding: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
   saveBtnText:    { fontFamily: "Cairo_700Bold", fontSize: 16, color: "#fff" },
 });

@@ -6,8 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "masroofy",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -27,7 +26,17 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "node_modules/@expo-google-fonts/cairo/Cairo_400Regular.ttf",
+            "node_modules/@expo-google-fonts/cairo/Cairo_600SemiBold.ttf",
+            "node_modules/@expo-google-fonts/cairo/Cairo_700Bold.ttf",
+            "node_modules/@expo-google-fonts/cairo/Cairo_900Black.ttf"
+          ]
+        }
+      ],
       "expo-web-browser"
     ],
     "experiments": {

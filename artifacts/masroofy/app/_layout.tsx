@@ -31,9 +31,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 const sheetOptions = {
-  presentation: "formSheet" as const,
-  sheetGrabberVisible: true,
-  contentStyle: { backgroundColor: "transparent" },
+  presentation: "modal" as const,
   headerShown: false,
 };
 
@@ -103,16 +101,16 @@ function RootLayoutNav() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="month/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="month/add" options={{ ...sheetOptions, sheetAllowedDetents: [0.75] }} />
-        <Stack.Screen name="expense/add" options={{ ...sheetOptions, sheetAllowedDetents: [0.75] }} />
-        <Stack.Screen name="expense/edit" options={{ ...sheetOptions, sheetAllowedDetents: [0.65] }} />
-        <Stack.Screen name="income/add" options={{ ...sheetOptions, sheetAllowedDetents: [0.7] }} />
-        <Stack.Screen name="vault/add" options={{ ...sheetOptions, sheetAllowedDetents: [0.6] }} />
-        <Stack.Screen name="vault/deposit" options={{ ...sheetOptions, sheetAllowedDetents: [0.6] }} />
-        <Stack.Screen name="vault/store" options={{ ...sheetOptions, sheetAllowedDetents: [0.65] }} />
+        <Stack.Screen name="month/add" options={sheetOptions} />
+        <Stack.Screen name="expense/add" options={sheetOptions} />
+        <Stack.Screen name="expense/edit" options={sheetOptions} />
+        <Stack.Screen name="income/add" options={sheetOptions} />
+        <Stack.Screen name="vault/add" options={sheetOptions} />
+        <Stack.Screen name="vault/deposit" options={sheetOptions} />
+        <Stack.Screen name="vault/store" options={sheetOptions} />
         <Stack.Screen name="categories/index" options={{ headerShown: false }} />
         <Stack.Screen name="debts/index" options={{ headerShown: false }} />
-        <Stack.Screen name="debts/add" options={{ ...sheetOptions, sheetAllowedDetents: [0.85] }} />
+        <Stack.Screen name="debts/add" options={sheetOptions} />
       </Stack>
       {isLocked && (
         <BiometricLock
