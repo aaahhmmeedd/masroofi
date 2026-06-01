@@ -2,13 +2,13 @@
   "expo": {
     "name": "مصروفي",
     "slug": "masroofy",
-    "version": "1.0.0",
+    "version": "0.5.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "masroofy",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/splash-icon.gif",
       "resizeMode": "contain",
       "backgroundColor": "#7B4D35"
     },
@@ -26,20 +26,10 @@
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-font",
-        {
-          "fonts": [
-            "node_modules/@expo-google-fonts/cairo/Cairo_400Regular.ttf",
-            "node_modules/@expo-google-fonts/cairo/Cairo_600SemiBold.ttf",
-            "node_modules/@expo-google-fonts/cairo/Cairo_700Bold.ttf",
-            "node_modules/@expo-google-fonts/cairo/Cairo_900Black.ttf"
-          ]
-        }
-      ],
-      "expo-web-browser"
-    ],
+  "expo-router",
+  "expo-font",
+  "expo-web-browser"
+],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

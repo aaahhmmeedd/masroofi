@@ -31,12 +31,34 @@ export function toArabicNumerals(num: number): string {
 export function formatCurrency(amount: number, currency: string = "ج.م"): string {
   const abs = Math.abs(amount);
   const rounded = Math.round(abs);
-  const digits = currency === "$"
-    ? rounded.toLocaleString("en-US")
-    : toArabicNumerals(rounded).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
-
-  if (currency === "$") return `$ ${rounded.toLocaleString("en-US")}`;
-  return `${digits} ${currency}`;
+  
+  if (currency === "$") {
+    return `$ ${rounded.toLocaleString("en-US")}`;
+  }
+  
+  // Format with thousand separators
+  const arabicNumStr = toArabicNumerals(rounded);
+  const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+  
+  // Add commas every 3 digits from right to left
+  const numStr = rounded.toString();
+  let withCommas = "";
+  for (let i = numStr.length - 1, count = 0; i >= 0; i--, count++) {
+    if (count > 0 && count % 3 === 0) withCommas = "," + withCommas;
+    withCommas = numStr[i] + withCommas;
+  }
+  
+  // Convert to Arabic numerals
+  const formatted = toArabicNumerals(parseInt(withCommas.replace(/,/g, "")));
+  
+  // Re-add commas in the Arabic version
+  let finalFormatted = "";
+  for (let i = formatted.length - 1, count = 0; i >= 0; i--, count++) {
+    if (count > 0 && count % 3 === 0) finalFormatted = "," + finalFormatted;
+    finalFormatted = formatted[i] + finalFormatted;
+  }
+  
+  return `${finalFormatted} ${currency}`;
 }
 
 export function formatArabicCurrency(amount: number): string {

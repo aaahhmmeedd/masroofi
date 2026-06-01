@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -154,29 +153,20 @@ export default function DebtsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
-      <View style={[styles.header, { paddingTop: topInset + 8, backgroundColor: C.navy }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-right" size={22} color="#fff" />
-        </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>الديون</Text>
-            <Text style={styles.headerSub}>متابعة الديون والقروض</Text>
+      <View style={[styles.header, { paddingTop: topInset + 16, backgroundColor: C.backgroundCard }]}>
+        <Text style={[styles.headerTitle, { color: C.text }]}>الديون</Text>
+        <View style={styles.headerStats}>
+          <View style={styles.headerStat}>
+            <Text style={[styles.headerStatLabel, { color: C.textSecondary }]}>إجمالي الديون</Text>
+            <Text style={[styles.headerStatValue, { color: C.text }]}>({toArabicNumerals(owedToMe.length + iOwe.length)})</Text>
           </View>
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryLabel, { color: C.textMuted }]}>لي</Text>
-          <Text style={[styles.summaryAmount, { color: "#1B818F" }]}>{fc(totalOwedToMe)}</Text>
-        </View>
-        <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryLabel, { color: C.textMuted }]}>عليّ</Text>
-          <Text style={[styles.summaryAmount, { color: "#C0504A" }]}>{fc(totalIOwe)}</Text>
-        </View>
-        <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryLabel, { color: C.textMuted }]}>الصافي</Text>
-          <Text style={[styles.summaryAmount, { color: totalOwedToMe >= totalIOwe ? "#1B818F" : "#C0504A" }]}>
-            {fc(Math.abs(totalOwedToMe - totalIOwe))}
-          </Text>
+          <View style={[styles.headerStatDivider, { backgroundColor: C.border }]} />
+          <View style={styles.headerStat}>
+            <Text style={[styles.headerStatLabel, { color: C.textSecondary }]}>الصافي</Text>
+            <Text style={[styles.headerStatValue, { color: totalOwedToMe >= totalIOwe ? "#1B818F" : "#C0504A" }]}>
+              {fc(Math.abs(totalOwedToMe - totalIOwe))}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -218,14 +208,33 @@ export default function DebtsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
-  headerTitle: { flex: 1, fontFamily: "Cairo_700Bold", fontSize: 18, color: "#fff", textAlign: "center" },
-  summaryRow: { flexDirection: "row", paddingVertical: 14, borderBottomWidth: 1 },
-  summaryItem: { flex: 1, alignItems: "center", gap: 2 },
-  summaryDivider: { width: 1 },
-  summaryLabel: { fontFamily: "Cairo_400Regular", fontSize: 12 },
-  summaryAmount: { fontFamily: "Cairo_700Bold", fontSize: 15 },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+  },
+  headerTitle: {
+    fontFamily: "Cairo_900Black",
+    fontSize: 28,
+  },
+  headerStats: {
+    flexDirection: "row",
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  headerStat: { flex: 1, alignItems: "center" },
+  headerStatDivider: {
+    width: 1,
+    height: 40,
+  },
+  headerStatLabel: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  headerStatValue: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 16,
+  },
   tabBar: { flexDirection: "row", margin: 16, marginBottom: 0, borderRadius: 12, padding: 4, gap: 4 },
   tabBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center" },
   tabBtnText: { fontFamily: "Cairo_700Bold", fontSize: 13 },

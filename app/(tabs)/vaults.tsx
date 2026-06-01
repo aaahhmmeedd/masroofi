@@ -1,8 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -20,9 +19,11 @@ import { toArabicNumerals } from "@/constants/arabic";
 import { ThemeColors } from "@/constants/colors";
 import { Vault } from "@/constants/types";
 import { useApp } from "@/context/AppContext";
+import { CustomConfirmDialog } from "@/components/CustomConfirmDialog";
 
 function VaultCard({ vault, C }: { vault: Vault; C: ThemeColors }) {
   const { deleteVault, fc } = useApp();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const pct = vault.goal > 0 ? Math.min(vault.balance / vault.goal, 1) : 0;
   const size = 60;
@@ -31,21 +32,13 @@ function VaultCard({ vault, C }: { vault: Vault; C: ThemeColors }) {
   const circumference = 2 * Math.PI * radius;
 
   const handleDelete = () => {
-    Alert.alert(
-      "حذف الخزنة",
-      `سيتم إعادة رصيد ${fc(vault.balance)} إلى السيولة`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "حذف",
-          style: "destructive",
-          onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            deleteVault(vault.id);
-          },
-        },
-      ]
-    );
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    deleteVault(vault.id);
+    setShowDeleteConfirm(false);
   };
 
   const handleWithdraw = () => {
@@ -59,7 +52,6 @@ function VaultCard({ vault, C }: { vault: Vault; C: ThemeColors }) {
         styles.vaultCard,
         {
           backgroundColor: C.backgroundCard,
-          borderTopColor: vault.color,
           shadowColor: C.shadow,
         },
       ]}
@@ -92,7 +84,7 @@ function VaultCard({ vault, C }: { vault: Vault; C: ThemeColors }) {
             {fc(vault.balance)}
           </Text>
           <Text style={[styles.vaultGoal, { color: C.textSecondary }]}>
-            الهدف: {fc(vault.goal)}
+            الهدف: {vault.goal > 0 ? fc(vault.goal) : "∞"}
           </Text>
         </View>
 
@@ -131,6 +123,18 @@ function VaultCard({ vault, C }: { vault: Vault; C: ThemeColors }) {
         <Feather name="archive" size={14} color={vault.color} />
         <Text style={[styles.depositBtnText, { color: vault.color }]}>الخزنة</Text>
       </Pressable>
+
+      <CustomConfirmDialog
+        visible={showDeleteConfirm}
+        title="حذف الخزنة"
+        message={`سيتم إعادة رصيد ${fc(vault.balance)} إلى السيولة`}
+        confirmText="حذف"
+        cancelText="إلغاء"
+        isDangerous={true}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        colors={C}
+      />
     </View>
   );
 }
@@ -151,35 +155,31 @@ export default function VaultsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomInset + 100 }}
       >
-        <LinearGradient
-          colors={[C.purpleDark, C.purple, C.purpleLight]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.header, { paddingTop: topInset + 16 }]}
+        <View
+          style={[styles.header, { paddingTop: topInset + 16, backgroundColor: C.backgroundCard }]}
         >
-          <Text style={styles.headerTitle}>الخزائن</Text>
-          <Text style={styles.headerSub}>ادخر لأهدافك المستقبلية</Text>
+          <Text style={[styles.headerTitle, { color: C.text }]}>الخزائن</Text>
           <View style={styles.headerStats}>
             <View style={styles.headerStat}>
-              <Text style={styles.headerStatLabel}>إجمالي الخزائن</Text>
-              <Text style={styles.headerStatValue}>
+              <Text style={[styles.headerStatLabel, { color: C.textSecondary }]}>عدد الخزائن</Text>
+              <Text style={[styles.headerStatValue, { color: C.text }]}>
+                {toArabicNumerals(data.vaults.length)}
+              </Text>
+            </View>
+            <View style={[styles.headerStatDivider, { backgroundColor: C.border }]} />
+            <View style={styles.headerStat}>
+              <Text style={[styles.headerStatLabel, { color: C.textSecondary }]}>إجمالي المدخر</Text>
+              <Text style={[styles.headerStatValue, { color: C.tint }]}>
                 {fc(totalVaulted)}
               </Text>
             </View>
-            <View style={styles.headerStatDivider} />
-            <View style={styles.headerStat}>
-              <Text style={styles.headerStatLabel}>السيولة الحرة</Text>
-              <Text style={styles.headerStatValue}>
-                {fc(data.savings)}
-              </Text>
-            </View>
           </View>
-        </LinearGradient>
+        </View>
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: C.text }]}>خزائني</Text>
           <Pressable
-            style={[styles.addBtn, { backgroundColor: C.purple }]}
+            style={[styles.addBtn, { backgroundColor: C.navy }]}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               router.push("/vault/add");
@@ -277,7 +277,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 16,
     padding: 16,
-    borderTopWidth: 3,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 8,

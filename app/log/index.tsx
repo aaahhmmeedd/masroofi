@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useMemo, useState, useRef } from "react";
 import {
   FlatList,
@@ -104,6 +105,9 @@ export default function LogScreen() {
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
       <View style={[styles.header, { paddingTop: topInset + 16, backgroundColor: C.background }]}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Feather name="chevron-right" size={24} color={C.text} />
+        </Pressable>
         <Text style={[styles.headerTitle, { color: C.text }]}>السجل</Text>
         <Text style={[styles.headerSub, { color: C.textSecondary }]}>
           {toArabicNumerals(data.transactions.length)} عملية
@@ -196,6 +200,13 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingBottom: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
   },
   headerTitle: {
     fontFamily: "Cairo_900Black",

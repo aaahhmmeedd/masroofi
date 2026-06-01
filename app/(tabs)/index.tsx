@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Animated,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -54,51 +55,70 @@ function QuranCard() {
 
 function LiquidityCard() {
   const { data, colors: C, fc } = useApp();
-  const totalVaultBalance = data.vaults.reduce((s, v) => s + v.balance, 0);
-  const activeDebts = (data.debts || []).filter(d => !d.isPaid);
-  const totalOwedToMe = activeDebts.filter(d => d.type === "owed_to_me").reduce((s, d) => s + d.remaining, 0);
-  const totalIOwe = activeDebts.filter(d => d.type === "i_owe").reduce((s, d) => s + d.remaining, 0);
-  const netWorth = data.savings + totalVaultBalance + totalOwedToMe - totalIOwe;
+  const [showModal, setShowModal] = useState(false);
+
+  const totalVaulted = data.vaults.reduce((s, v) => s + v.balance, 0);
+  const totalDebts = data.debts.reduce((s, d) => s + d.amount, 0);
+  const netWorth = data.savings + totalVaulted - totalDebts;
 
   return (
-    <View style={[styles.liquidityCard, { backgroundColor: C.backgroundCard, borderColor: C.border }]}>
-      <View style={styles.liquidityMain}>
-        <Text style={[styles.liquidityMainLabel, { color: C.textSecondary }]}>السيولة الحرة</Text>
-        <Text style={[styles.liquidityMainAmount, { color: C.tint }]}>{fc(data.savings)}</Text>
-        <View style={styles.netWorthRow}>
-          <Feather name="trending-up" size={11} color={C.textMuted} />
-          <Text style={[styles.liquidityMainHint, { color: C.textMuted }]}>
-            صافي الثروة: {fc(netWorth)}
-          </Text>
+    <>
+      <Pressable 
+        style={[styles.liquidityCard, { backgroundColor: C.backgroundCard, borderColor: C.border }]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setShowModal(true);
+        }}
+      >
+        <View style={styles.liquidityMain}>
+          <Text style={[styles.liquidityMainLabel, { color: C.textSecondary }]}>السيولة</Text>
+          <Text style={[styles.liquidityMainAmount, { color: C.tint }]}>{fc(data.savings)}</Text>
         </View>
-      </View>
-      <View style={[styles.liquidityDividerH, { backgroundColor: C.border }]} />
-      <View style={styles.liquidityRow}>
-        <Pressable style={styles.liquidityItem} onPress={() => router.push("/(tabs)/vaults")}>
-          <Feather name="archive" size={16} color={C.navy} />
-          <Text style={[styles.liquidityItemLabel, { color: C.textSecondary }]}>الخزائن</Text>
-          <Text style={[styles.liquidityItemAmount, { color: C.navy }]}>{fc(totalVaultBalance)}</Text>
+      </Pressable>
+
+      <Modal visible={showModal} transparent animationType="fade">
+        <Pressable 
+          style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+          onPress={() => setShowModal(false)}
+        >
+          <Pressable 
+            style={[styles.modalContent, { backgroundColor: C.backgroundCard }]}
+            onPress={() => {}}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: C.text }]}>ملخص الثروة</Text>
+              <Pressable onPress={() => setShowModal(false)}>
+                <Feather name="x" size={20} color={C.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.modalStats}>
+              <View style={[styles.statRow, { borderBottomColor: C.border }]}>
+                <Text style={[styles.statLabel, { color: C.textSecondary }]}>السيولة</Text>
+                <Text style={[styles.statValue, { color: C.tint }]}>{fc(data.savings)}</Text>
+              </View>
+              
+              <View style={[styles.statRow, { borderBottomColor: C.border }]}>
+                <Text style={[styles.statLabel, { color: C.textSecondary }]}>إجمالي الخزائن</Text>
+                <Text style={[styles.statValue, { color: C.navy }]}>{fc(totalVaulted)}</Text>
+              </View>
+
+              <View style={[styles.statRow, { borderBottomColor: C.border }]}>
+                <Text style={[styles.statLabel, { color: C.textSecondary }]}>إجمالي الديون</Text>
+                <Text style={[styles.statValue, { color: C.danger }]}>{fc(totalDebts)}</Text>
+              </View>
+
+              <View style={[styles.statRow, { borderBottomWidth: 0 }]}>
+                <Text style={[styles.statLabel, { color: C.text, fontFamily: "Cairo_700Bold" }]}>صافي الثروة</Text>
+                <Text style={[styles.statValue, { color: netWorth >= 0 ? C.success : C.danger, fontFamily: "Cairo_700Bold", fontSize: 18 }]}>
+                  {fc(netWorth)}
+                </Text>
+              </View>
+            </View>
+          </Pressable>
         </Pressable>
-        <View style={[styles.liquidityDividerV, { backgroundColor: C.border }]} />
-        <Pressable style={styles.liquidityItem} onPress={() => router.push("/debts" as any)}>
-          <Feather name="users" size={16} color={totalIOwe > 0 ? C.danger : C.textMuted} />
-          <Text style={[styles.liquidityItemLabel, { color: C.textSecondary }]}>
-            {totalOwedToMe > 0 && totalIOwe > 0 ? "ديون" : totalOwedToMe > 0 ? "لي" : "علي"}
-          </Text>
-          <Text style={[styles.liquidityItemAmount, {
-            color: totalOwedToMe > 0 ? C.tint : totalIOwe > 0 ? C.danger : C.textMuted
-          }]}>
-            {totalOwedToMe > 0 ? `+${fc(totalOwedToMe)}` : totalIOwe > 0 ? `-${fc(totalIOwe)}` : fc(0)}
-          </Text>
-        </Pressable>
-        <View style={[styles.liquidityDividerV, { backgroundColor: C.border }]} />
-        <Pressable style={styles.liquidityItem} onPress={() => router.push("/(tabs)/analytics")}>
-          <Feather name="bar-chart-2" size={16} color={C.tint} />
-          <Text style={[styles.liquidityItemLabel, { color: C.textSecondary }]}>التقارير</Text>
-          <Text style={[styles.liquidityItemHint, { color: C.tint }]}>عرض ←</Text>
-        </Pressable>
-      </View>
-    </View>
+      </Modal>
+    </>
   );
 }
 
@@ -129,11 +149,18 @@ function MonthCard({ month }: { month: Month }) {
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <Pressable
         onPress={handlePress}
-        style={[styles.monthCard, { backgroundColor: C.backgroundCard, shadowColor: C.shadow }]}
+        style={[
+          styles.monthCard,
+          {
+            backgroundColor: month.isEnded ? C.backgroundSecondary : C.backgroundCard,
+            shadowColor: C.shadow,
+            opacity: month.isEnded ? 0.6 : 1,
+          },
+        ]}
       >
         <View style={styles.monthCardTop}>
           <View>
-            <Text style={[styles.monthName, { color: C.text }]}>
+            <Text style={[styles.monthName, { color: month.isEnded ? C.textMuted : C.text }]}>
               {ARABIC_MONTHS[month.month - 1]}
             </Text>
             <Text style={[styles.monthYear, { color: C.textSecondary }]}>
@@ -142,7 +169,7 @@ function MonthCard({ month }: { month: Month }) {
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             {month.isEnded && (
-              <View style={[styles.endedBadge, { backgroundColor: C.successDark }]}>
+              <View style={[styles.endedBadge, { backgroundColor: C.textMuted }]}>
                 <Text style={styles.endedBadgeText}>منتهي</Text>
               </View>
             )}
@@ -185,6 +212,55 @@ function MonthCard({ month }: { month: Month }) {
   );
 }
 
+function YearsSection() {
+  const { data, colors: C } = useApp();
+
+  // Get unique years from months, sorted desc
+  const years = Array.from(new Set(data.months.map(m => m.year))).sort((a, b) => b - a);
+
+  if (years.length === 0) return null;
+
+  return (
+    <View style={styles.yearsSection}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+        scrollEventThrottle={16}
+      >
+        {years.map((year) => (
+          <Pressable
+            key={year}
+            style={[
+              styles.yearChip,
+              {
+                backgroundColor: C.backgroundCard,
+                borderColor: C.border,
+              },
+            ]}
+          >
+            <Text style={[styles.yearChipText, { color: C.text }]}>
+              {toArabicNumerals(year)}
+            </Text>
+          </Pressable>
+        ))}
+        <Pressable
+          style={[
+            styles.yearChip,
+            {
+              backgroundColor: C.navy,
+            },
+          ]}
+          onPress={() => router.push("/month/add")}
+        >
+          <Feather name="plus" size={16} color="#fff" />
+          <Text style={[styles.yearChipText, { color: "#fff" }]}>إضافة</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { data, colors: C } = useApp();
@@ -212,7 +288,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={[styles.headerTitle, { color: C.text }]}>مصروفي</Text>
-            <Text style={[styles.headerSub, { color: C.textSecondary }]}>إدارة مصاريفك بذكاء</Text>
+            <Text style={[styles.headerSub, { color: C.textSecondary }]}>مصروفك تحت المراقبة</Text>
           </View>
           <Pressable
             onPress={() => router.push("/(tabs)/settings")}
@@ -225,26 +301,7 @@ export default function HomeScreen() {
         <QuranCard />
         <LiquidityCard />
 
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={[styles.sectionTitle, { color: C.text }]}>الشهور</Text>
-            {activeMonths > 0 && (
-              <Text style={[styles.sectionSub, { color: C.textSecondary }]}>
-                {toArabicNumerals(activeMonths)} شهر نشط
-              </Text>
-            )}
-          </View>
-          <Pressable
-            style={[styles.addBtn, { backgroundColor: C.navy }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/month/add");
-            }}
-          >
-            <Feather name="plus" size={18} color={C.white} />
-            <Text style={[styles.addBtnText, { color: C.white }]}>إضافة شهر</Text>
-          </Pressable>
-        </View>
+        <YearsSection />
 
         {sortedMonths.length === 0 ? (
           <View style={styles.emptyState}>
@@ -275,7 +332,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", paddingHorizontal: 20, marginBottom: 16,
   },
-  headerTitle: { fontFamily: "Cairo_900Black", fontSize: 28 },
+  headerTitle: { fontFamily: "Cairo_900Black", fontSize: 28, marginBottom: 2 },
   headerSub: { fontFamily: "Cairo_400Regular", fontSize: 13 },
   iconBtn: {
     width: 44, height: 44, borderRadius: 22,
@@ -300,15 +357,22 @@ const styles = StyleSheet.create({
   liquidityMain: { padding: 20, alignItems: "center", gap: 4 },
   liquidityMainLabel: { fontFamily: "Cairo_600SemiBold", fontSize: 13 },
   liquidityMainAmount: { fontFamily: "Cairo_900Black", fontSize: 30 },
-  netWorthRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  liquidityMainHint: { fontFamily: "Cairo_400Regular", fontSize: 11 },
-  liquidityDividerH: { height: 1 },
-  liquidityDividerV: { width: 1, height: 44 },
-  liquidityRow: { flexDirection: "row", alignItems: "center" },
-  liquidityItem: { flex: 1, alignItems: "center", paddingVertical: 14, gap: 3 },
-  liquidityItemLabel: { fontFamily: "Cairo_400Regular", fontSize: 11 },
-  liquidityItemAmount: { fontFamily: "Cairo_700Bold", fontSize: 13 },
-  liquidityItemHint: { fontFamily: "Cairo_600SemiBold", fontSize: 12 },
+  yearsSection: {
+    marginBottom: 20,
+  },
+  yearChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 60,
+  },
+  yearChipText: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+  },
   sectionHeader: {
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", paddingHorizontal: 20, marginBottom: 12,
@@ -349,4 +413,12 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: "Cairo_400Regular", fontSize: 14, textAlign: "center", lineHeight: 22 },
   emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 20, marginTop: 4 },
   emptyBtnText: { fontFamily: "Cairo_600SemiBold", fontSize: 14 },
+  modalOverlay: { flex: 1, alignItems: "center", justifyContent: "center" },
+  modalContent: { borderRadius: 20, width: "80%", overflow: "hidden", maxWidth: 320 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.1)" },
+  modalTitle: { fontFamily: "Cairo_700Bold", fontSize: 18 },
+  modalStats: { padding: 20 },
+  statRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1 },
+  statLabel: { fontFamily: "Cairo_400Regular", fontSize: 13 },
+  statValue: { fontFamily: "Cairo_700Bold", fontSize: 16 },
 });

@@ -60,20 +60,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="debts"
+        options={{
+          title: "الديون",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="users" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="analytics"
         options={{
           title: "التقارير",
           tabBarIcon: ({ color, size }) => (
             <Feather name="bar-chart-2" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="log"
-        options={{
-          title: "السجل",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="clock" size={size} color={color} />
           ),
         }}
       />
@@ -86,6 +86,7 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="log" options={{ href: null }} />
     </Tabs>
   );
 }

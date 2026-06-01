@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useState } from "react";
+import { toArabicNumerals } from "@/constants/arabic";
 import {
   Alert,
   FlatList,
@@ -16,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useApp } from "@/context/AppContext";
+import { CustomConfirmDialog } from "@/components/CustomConfirmDialog";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "طعام ومشروبات": "coffee",
@@ -45,6 +47,8 @@ export default function CategoriesScreen() {
   const [editingCat, setEditingCat] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedDeleteCat, setSelectedDeleteCat] = useState<string | null>(null);
 
   const handleAdd = async () => {
     const trimmed = newName.trim();
@@ -60,21 +64,17 @@ export default function CategoriesScreen() {
   };
 
   const handleDelete = (name: string) => {
-    Alert.alert(
-      "حذف الفئة",
-      `هل تريد حذف فئة "${name}"؟ ستبقى المصاريف المُدرجة تحتها كما هي.`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "حذف",
-          style: "destructive",
-          onPress: async () => {
-            await deleteCategory(name);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          },
-        },
-      ]
-    );
+    setSelectedDeleteCat(name);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedDeleteCat) {
+      await deleteCategory(selectedDeleteCat);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setShowDeleteConfirm(false);
+      setSelectedDeleteCat(null);
+    }
   };
 
   const handleStartEdit = (name: string) => {
@@ -107,21 +107,28 @@ export default function CategoriesScreen() {
       style={[styles.container, { backgroundColor: C.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={[styles.header, { paddingTop: topInset + 8, backgroundColor: C.navy }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-right" size={22} color="#fff" />
-        </Pressable>
-        <Text style={styles.headerTitle}>فئات المصاريف</Text>
-        <Pressable
-          onPress={() => {
-            setIsAdding(true);
-            setEditingCat(null);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }}
-          style={styles.addHeaderBtn}
-        >
-          <Feather name="plus" size={22} color="#fff" />
-        </Pressable>
+      <View style={[styles.header, { paddingTop: topInset + 16, backgroundColor: C.backgroundCard }]}>
+        <View style={styles.headerTop}>
+          <Text style={[styles.headerTitle, { color: C.text }]}>فئات المصاريف</Text>
+          <Pressable
+            onPress={() => {
+              setIsAdding(true);
+              setEditingCat(null);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}
+            style={[styles.addHeaderBtn, { backgroundColor: C.navy }]}
+          >
+            <Feather name="plus" size={16} color="#fff" />
+          </Pressable>
+        </View>
+        <View style={styles.headerStats}>
+          <View style={styles.headerStat}>
+            <Text style={[styles.headerStatLabel, { color: C.textSecondary }]}>عدد الفئات</Text>
+            <Text style={[styles.headerStatValue, { color: C.text }]}>
+              {toArabicNumerals(data.categories.length)}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {isAdding && (
@@ -235,6 +242,20 @@ export default function CategoriesScreen() {
           );
         }}
       />
+      <CustomConfirmDialog
+        visible={showDeleteConfirm}
+        title="حذف الفئة"
+        message={`هل تريد حذف فئة "${selectedDeleteCat}"؟ ستبقى المصاريف المُدرجة تحتها كما هي.`}
+        confirmText="حذف"
+        cancelText="إلغاء"
+        isDangerous={true}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setShowDeleteConfirm(false);
+          setSelectedDeleteCat(null);
+        }}
+        colors={C}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -242,34 +263,40 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
   },
   headerTitle: {
+    fontFamily: "Cairo_900Black",
+    fontSize: 28,
     flex: 1,
+  },
+  headerStats: {
+    flexDirection: "row",
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  headerStat: { flex: 1, alignItems: "center" },
+  headerStatLabel: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  headerStatValue: {
     fontFamily: "Cairo_700Bold",
-    fontSize: 18,
-    color: "#fff",
-    textAlign: "center",
+    fontSize: 16,
   },
   addHeaderBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 10,
   },
   addBox: {
     flexDirection: "row",

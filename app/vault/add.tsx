@@ -33,13 +33,14 @@ export default function AddVaultSheet() {
       Alert.alert("خطأ", "يرجى إدخال اسم الخزنة");
       return;
     }
-    if (!goal || parseFloat(goal) <= 0) {
-      Alert.alert("خطأ", "يرجى إدخال هدف ادخاري صحيح");
+    const goalAmount = goal ? parseFloat(goal) : 0;
+    if (goalAmount < 0) {
+      Alert.alert("خطأ", "الهدف يجب أن يكون موجباً أو فارغاً");
       return;
     }
     setIsLoading(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await addVault(name.trim(), parseFloat(goal), color);
+    await addVault(name.trim(), goalAmount || 0, color);
     setIsLoading(false);
     router.back();
   };

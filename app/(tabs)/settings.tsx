@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as LocalAuthentication from "expo-local-authentication";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Alert,
   Modal,
@@ -15,11 +15,13 @@ import {
   Text,
   TextInput,
   View,
+  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useApp } from "@/context/AppContext";
 import { requestPermissions } from "@/services/notifications";
+import { useScrollToTop, ScrollToTopButton } from "@/components/ScrollToTopButton";
 
 const CURRENCIES = [
   { symbol: "ج.م", label: "جنيه مصري" },
@@ -62,22 +64,30 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const {
     data, colors: C, fc,
-    updateSettings, addRecurringExpense, deleteRecurringExpense,
+    updateSettings,
     exportData, importData, generateDemoData,
   } = useApp();
   const isWeb = Platform.OS === "web";
   const topInset  = isWeb ? 67 : insets.top;
   const bottomInset = isWeb ? 34 : insets.bottom;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const { opacity, shouldShow, handleScroll } = useScrollToTop(C);
 
   const categories = data.categories?.length ? data.categories : ["أخرى"];
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
-  const [showAddRecurring, setShowAddRecurring] = useState(false);
-  const [recurringName, setRecurringName] = useState("");
-  const [recurringAmount, setRecurringAmount] = useState("");
-  const [recurringCategory, setRecurringCategory] = useState(categories[0]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportOptions, setExportOptions] = useState({
+    months: true,
+    expenses: true,
+    vaults: true,
+    debts: true,
+    recurringExpenses: true,
+    categories: true,
+  });
+  const [exportDateRange, setExportDateRange] = useState<"all" | "last3m" | "last6m" | "last12m">("all");
 
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -99,17 +109,47 @@ export default function SettingsScreen() {
   };
 
   const handleExport = async () => {
+    setShowExportModal(true);
+  };
+
+  const handleExportWithOptions = async () => {
     try {
-      const json = await exportData();
+      let filteredData = JSON.parse(JSON.stringify(data));
+      
+      // Filter by date range
+      const now = new Date();
+      const cutoffMonths = exportDateRange === "all" ? 999 : exportDateRange === "last3m" ? 3 : exportDateRange === "last6m" ? 6 : 12;
+      const cutoff = new Date(now.setMonth(now.getMonth() - cutoffMonths));
+      
+      // Apply filters
+      if (!exportOptions.months) filteredData.months = [];
+      if (!exportOptions.expenses) filteredData.expenses = [];
+      if (!exportOptions.vaults) filteredData.vaults = [];
+      if (!exportOptions.debts) filteredData.debts = [];
+      if (!exportOptions.recurringExpenses) filteredData.recurringExpenses = [];
+      if (!exportOptions.categories) filteredData.categories = [];
+      
+      // Filter transactions/expenses by date
+      if (!exportOptions.expenses && exportDateRange !== "all") {
+        filteredData.expenses = filteredData.expenses.filter((e: any) => e.createdAt >= cutoff.getTime());
+      }
+      
+      const json = JSON.stringify(filteredData, null, 2);
+      
       if (Platform.OS === "web") {
         const blob = new Blob([json], { type: "application/json" });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement("a");
-        a.href = url; a.download = "masroofy-backup.json"; a.click();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `masroofy-backup-${new Date().toISOString().split("T")[0]}.json`;
+        a.click();
       } else {
-        await Share.share({ message: json, title: "مصروفي - نسخة احتياطية" });
+        await Share.share({ message: json, title: "مصروفي - نسخة احتياطية مخصصة" });
       }
-    } catch { Alert.alert("خطأ", "فشل في تصدير البيانات"); }
+      setShowExportModal(false);
+    } catch {
+      Alert.alert("خطأ", "فشل في تصدير البيانات");
+    }
   };
 
   const generateMonthlyReportHTML = () => {
@@ -229,14 +269,6 @@ export default function SettingsScreen() {
     } catch { setImportError("الملف غير صالح. تأكد من صحة ملف JSON"); }
   };
 
-  const handleAddRecurring = async () => {
-    if (!recurringName.trim()) { Alert.alert("خطأ", "أدخل اسم المصروف"); return; }
-    if (!recurringAmount || parseFloat(recurringAmount) <= 0) { Alert.alert("خطأ", "أدخل مبلغاً صحيحاً"); return; }
-    await addRecurringExpense(recurringName.trim(), parseFloat(recurringAmount), recurringCategory);
-    setRecurringName(""); setRecurringAmount(""); setShowAddRecurring(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
   const handleNotificationsToggle = async (v: boolean) => {
     if (v && Platform.OS !== "web") {
       const granted = await requestPermissions();
@@ -248,7 +280,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomInset + 100 }}>
+      <ScrollView ref={scrollViewRef} onScroll={handleScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomInset + 100 }}>
         <View style={[styles.header, { paddingTop: topInset + 16 }]}>
           <Text style={[styles.headerTitle, { color: C.text }]}>المزيد</Text>
         </View>
@@ -345,12 +377,6 @@ export default function SettingsScreen() {
           />
           <Divider />
           <SettingRow
-            icon="users" title="الديون"
-            subtitle={`${(data.debts || []).filter(d => !d.isPaid).length} دين نشط`}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/debts" as any); }}
-          />
-          <Divider />
-          <SettingRow
             icon="bell" title="الإشعارات"
             subtitle={isWeb ? "متاح على تطبيق الجوال فقط" : data.settings.notificationsEnabled ? "مفعّلة · تنبيهات الميزانية والديون" : "تنبيهات نهاية الشهر والديون والميزانية"}
             rightElement={
@@ -388,78 +414,47 @@ export default function SettingsScreen() {
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/categories" as any); }}
           />
           <Divider />
-          <View>
-            {data.recurringExpenses.length === 0 && !showAddRecurring && (
-              <View style={styles.emptyRecurring}>
-                <Text style={[styles.emptyRecurringText, { color: C.textMuted }]}>لا توجد مصاريف متكررة. تُضاف تلقائياً عند فتح شهر جديد.</Text>
-              </View>
-            )}
-            {data.recurringExpenses.map((re) => (
-              <View key={re.id} style={[styles.recurringItem, { borderBottomColor: C.border }]}>
-                <View style={[styles.recurringIcon, { backgroundColor: C.tint + "20" }]}>
-                  <Feather name="repeat" size={14} color={C.tint} />
-                </View>
-                <View style={styles.recurringInfo}>
-                  <Text style={[styles.recurringName, { color: C.text }]}>{re.name}</Text>
-                  <Text style={[styles.recurringMeta, { color: C.textSecondary }]}>{fc(re.amount)} · {re.category}</Text>
-                </View>
-                <Pressable onPress={() => deleteRecurringExpense(re.id)} style={styles.recurringDelete}>
-                  <Feather name="trash-2" size={14} color={C.danger} />
-                </Pressable>
-              </View>
-            ))}
-            {showAddRecurring && (
-              <View style={[styles.addRecurringForm, { borderTopColor: C.border }]}>
-                <TextInput
-                  style={[styles.miniInput, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
-                  value={recurringName} onChangeText={setRecurringName}
-                  placeholder="اسم المصروف" placeholderTextColor={C.textMuted} textAlign="right"
-                />
-                <TextInput
-                  style={[styles.miniInput, { backgroundColor: C.backgroundSecondary, color: C.text, borderColor: C.border }]}
-                  value={recurringAmount} onChangeText={setRecurringAmount}
-                  placeholder="المبلغ" placeholderTextColor={C.textMuted}
-                  keyboardType="decimal-pad" textAlign="right"
-                />
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                  <View style={{ flexDirection: "row", gap: 6 }}>
-                    {categories.map((cat) => (
-                      <Pressable key={cat} onPress={() => setRecurringCategory(cat)}
-                        style={[styles.miniChip, { backgroundColor: recurringCategory === cat ? C.tint : C.backgroundSecondary, borderColor: recurringCategory === cat ? C.tint : C.border }]}>
-                        <Text style={[styles.miniChipText, { color: recurringCategory === cat ? C.white : C.textSecondary }]}>{cat}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </ScrollView>
-                <View style={styles.addRecurringBtns}>
-                  <Pressable onPress={() => setShowAddRecurring(false)} style={[styles.miniBtn, { backgroundColor: C.backgroundSecondary }]}>
-                    <Text style={[styles.miniBtnText, { color: C.textSecondary }]}>إلغاء</Text>
-                  </Pressable>
-                  <Pressable onPress={handleAddRecurring} style={[styles.miniBtn, { backgroundColor: C.navy }]}>
-                    <Text style={[styles.miniBtnText, { color: C.white }]}>إضافة</Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-            {!showAddRecurring && (
-              <Pressable onPress={() => setShowAddRecurring(true)} style={[styles.addRecurringBtn, { borderTopColor: data.recurringExpenses.length > 0 ? C.border : "transparent" }]}>
-                <Feather name="plus" size={16} color={C.tint} />
-                <Text style={[styles.addRecurringBtnText, { color: C.tint }]}>إضافة مصروف متكرر</Text>
-              </Pressable>
-            )}
-          </View>
+          <SettingRow
+            icon="repeat" title="المصاريف المتكررة"
+            subtitle={`${data.recurringExpenses.length} مصروف · إدارة المصاريف الشهرية`}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/recurringExpenses" as any); }}
+          />
         </View>
 
-        {/* ── البيانات والنسخ الاحتياطي ── */}
-        <SectionLabel text="البيانات والنسخ الاحتياطي" />
+        {/* ── البيانات ── */}
+        <SectionLabel text="البيانات" />
         <View style={[styles.section, { backgroundColor: C.backgroundCard }]}>
-          <SettingRow icon="file-text" title="إنشاء تقرير مالي" subtitle="تقرير HTML شامل بكل بياناتك" onPress={handleGeneratePDF} />
-          <SettingRow icon="download" title="تصدير البيانات" subtitle="احفظ بياناتك كملف JSON" onPress={handleExport} />
+          <SettingRow
+            icon="clock" title="السجل"
+            subtitle={`${data.transactions.length} عملية مالية`}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/log" as any); }}
+          />
           <Divider />
-          <SettingRow icon="upload" title="استيراد البيانات" subtitle="استعادة من ملف نسخة احتياطية"
-            onPress={() => { setImportText(""); setImportError(""); setShowImportModal(true); }} />
+          <SettingRow
+            icon="file-text" title="التقرير"
+            subtitle="إنشاء تقرير شامل عن أموالك"
+            onPress={handleGeneratePDF}
+          />
           <Divider />
-          <SettingRow icon="info" title="إحصائيات البيانات"
+          <SettingRow
+            icon="download" title="التصدير"
+            subtitle="تصدير البيانات إلى ملف JSON"
+            onPress={handleExport}
+          />
+          <Divider />
+          <SettingRow
+            icon="upload" title="الاستيراد"
+            subtitle="استيراد بيانات من ملف قديم"
+            onPress={() => setShowImportModal(true)}
+          />
+          <Divider />
+          <SettingRow
+            icon="trash-2" title="حذف جميع البيانات"
+            subtitle="لا يمكن التراجع عن هذا الإجراء"
+            onPress={handleClearData} danger
+          />
+          <Divider />
+          <SettingRow icon="info" title="إحصائيات"
             subtitle={`${data.months.length} شهر · ${data.expenses.length} مصروف · ${data.vaults.length} خزنة`} />
         </View>
 
@@ -469,13 +464,9 @@ export default function SettingsScreen() {
           <SettingRow icon="database" title="توليد بيانات تجريبية"
             subtitle="إضافة ٦ أشهر من البيانات للاختبار"
             onPress={handleGenerateDemoData} />
-          <Divider />
-          <SettingRow icon="trash-2" title="حذف جميع البيانات"
-            subtitle="لا يمكن التراجع عن هذا الإجراء"
-            onPress={handleClearData} danger />
         </View>
 
-        <Text style={[styles.footer, { color: C.textMuted }]}>مصروفي · الإصدار ٢.١</Text>
+        <Text style={[styles.footer, { color: C.textMuted }]}>مصروفي · الإصدار ٠.٥.١</Text>
       </ScrollView>
 
       <Modal visible={showImportModal} transparent animationType="slide" onRequestClose={() => setShowImportModal(false)}>
@@ -508,6 +499,67 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={showExportModal} transparent animationType="slide" onRequestClose={() => setShowExportModal(false)}>
+        <View style={styles.modalOverlay}>
+          <ScrollView style={[styles.modalBox, { backgroundColor: C.backgroundCard }]} contentContainerStyle={{ paddingBottom: 20 }}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: C.text }]}>تخصيص التصدير</Text>
+              <Pressable onPress={() => setShowExportModal(false)}>
+                <Feather name="x" size={22} color={C.textMuted} />
+              </Pressable>
+            </View>
+
+            <Text style={[styles.modalSectionTitle, { color: C.textSecondary }]}>أنواع البيانات:</Text>
+            {[
+              { key: "months" as const, label: "الشهور" },
+              { key: "expenses" as const, label: "المصاريف" },
+              { key: "vaults" as const, label: "الخزائن" },
+              { key: "debts" as const, label: "الديون" },
+              { key: "recurringExpenses" as const, label: "المصاريف المتكررة" },
+              { key: "categories" as const, label: "الفئات" },
+            ].map(({ key, label }) => (
+              <Pressable
+                key={key}
+                onPress={() => setExportOptions({ ...exportOptions, [key]: !exportOptions[key] })}
+                style={[styles.checkboxRow, { borderBottomColor: C.border }]}
+              >
+                <Text style={[styles.checkboxLabel, { color: C.text }]}>{label}</Text>
+                <View style={[styles.checkbox, { borderColor: C.border, backgroundColor: exportOptions[key] ? C.tint : "transparent" }]}>
+                  {exportOptions[key] && <Feather name="check" size={14} color={C.white} />}
+                </View>
+              </Pressable>
+            ))}
+
+            <Text style={[styles.modalSectionTitle, { color: C.textSecondary, marginTop: 16 }]}>نطاق التاريخ:</Text>
+            {[
+              { val: "all" as const, label: "جميع البيانات" },
+              { val: "last3m" as const, label: "آخر 3 أشهر" },
+              { val: "last6m" as const, label: "آخر 6 أشهر" },
+              { val: "last12m" as const, label: "آخر 12 شهر" },
+            ].map(({ val, label }) => (
+              <Pressable
+                key={val}
+                onPress={() => setExportDateRange(val)}
+                style={[styles.radioRow, { borderBottomColor: C.border, backgroundColor: exportDateRange === val ? C.tint + "15" : "transparent" }]}
+              >
+                <Text style={[styles.radioLabel, { color: C.text }]}>{label}</Text>
+                <View style={[styles.radio, { borderColor: C.border, backgroundColor: exportDateRange === val ? C.tint : "transparent" }]} />
+              </Pressable>
+            ))}
+
+            <View style={styles.modalBtns}>
+              <Pressable onPress={() => setShowExportModal(false)} style={[styles.modalBtn, { backgroundColor: C.backgroundSecondary }]}>
+                <Text style={[styles.modalBtnText, { color: C.textSecondary }]}>إلغاء</Text>
+              </Pressable>
+              <Pressable onPress={handleExportWithOptions} style={[styles.modalBtn, { backgroundColor: C.navy }]}>
+                <Text style={[styles.modalBtnText, { color: C.white }]}>تصدير</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+      <ScrollToTopButton scrollViewRef={scrollViewRef} colors={C} opacity={opacity} shouldShow={shouldShow} />
     </View>
   );
 }
@@ -560,4 +612,11 @@ const styles = StyleSheet.create({
   modalBtns: { flexDirection: "row", gap: 10 },
   modalBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: "center" },
   modalBtnText: { fontFamily: "Cairo_600SemiBold", fontSize: 15 },
+  modalSectionTitle: { fontFamily: "Cairo_600SemiBold", fontSize: 13, marginBottom: 10, paddingHorizontal: 16 },
+  checkboxRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1 },
+  checkboxLabel: { fontFamily: "Cairo_400Regular", fontSize: 14 },
+  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  radioRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderRadius: 8, marginHorizontal: 12, marginBottom: 8 },
+  radioLabel: { fontFamily: "Cairo_400Regular", fontSize: 14 },
+  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5 },
 });

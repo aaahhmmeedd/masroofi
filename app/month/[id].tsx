@@ -22,6 +22,7 @@ import { ARABIC_MONTHS, toArabicNumerals } from "@/constants/arabic";
 import { Expense, Transaction } from "@/constants/types";
 import { useApp } from "@/context/AppContext";
 import { notifyBudgetWarning } from "@/services/notifications";
+import { CustomConfirmDialog } from "@/components/CustomConfirmDialog";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -96,6 +97,11 @@ export default function MonthDetailScreen() {
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [newBudget, setNewBudget] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showDeleteExpenseConfirm, setShowDeleteExpenseConfirm] = useState(false);
+  const [selectedDeleteExpenseId, setSelectedDeleteExpenseId] = useState<string | null>(null);
+  const [showDeleteTransactionConfirm, setShowDeleteTransactionConfirm] = useState(false);
+  const [selectedDeleteTxId, setSelectedDeleteTxId] = useState<string | null>(null);
+  const [showDeleteMonthConfirm, setShowDeleteMonthConfirm] = useState(false);
 
   const month = data.months.find((m) => m.id === id);
   if (!month) {
@@ -117,10 +123,17 @@ export default function MonthDetailScreen() {
 
   const handleDeleteExpense = (expenseId: string) => {
     if (month.isEnded) { Alert.alert("شهر مؤرشف", "لا يمكن تعديل شهر منتهٍ"); return; }
-    Alert.alert("حذف المصروف", "هل أنت متأكد؟", [
-      { text: "إلغاء", style: "cancel" },
-      { text: "حذف", style: "destructive", onPress: () => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); deleteExpense(expenseId); } },
-    ]);
+    setSelectedDeleteExpenseId(expenseId);
+    setShowDeleteExpenseConfirm(true);
+  };
+
+  const confirmDeleteExpense = () => {
+    if (selectedDeleteExpenseId) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      deleteExpense(selectedDeleteExpenseId);
+      setShowDeleteExpenseConfirm(false);
+      setSelectedDeleteExpenseId(null);
+    }
   };
 
   const handleEditExpense = (expenseId: string) => {
@@ -130,30 +143,27 @@ export default function MonthDetailScreen() {
   };
 
   const handleDeleteTransaction = (txId: string) => {
-    const doDelete = () => {
+    setSelectedDeleteTxId(txId);
+    setShowDeleteTransactionConfirm(true);
+  };
+
+  const confirmDeleteTransaction = () => {
+    if (selectedDeleteTxId) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      deleteTransaction(txId);
-    };
-    if (Platform.OS === "web") {
-      if (window.confirm("حذف الحركة\nهل أنت متأكد؟ سيتم عكس تأثير هذه الحركة على الميزانية.")) doDelete();
-    } else {
-      Alert.alert("حذف الحركة", "هل أنت متأكد؟ سيتم عكس تأثير هذه الحركة على الميزانية.", [
-        { text: "إلغاء", style: "cancel" },
-        { text: "حذف", style: "destructive", onPress: doDelete },
-      ]);
+      deleteTransaction(selectedDeleteTxId);
+      setShowDeleteTransactionConfirm(false);
+      setSelectedDeleteTxId(null);
     }
   };
 
   const handleDeleteMonth = () => {
-    const doDelete = () => { deleteMonth(id); router.back(); };
-    if (Platform.OS === "web") {
-      if (window.confirm("حذف الشهر\nسيتم حذف جميع مصاريف هذا الشهر. هل أنت متأكد؟")) doDelete();
-    } else {
-      Alert.alert("حذف الشهر", "سيتم حذف جميع مصاريف هذا الشهر", [
-        { text: "إلغاء", style: "cancel" },
-        { text: "حذف", style: "destructive", onPress: doDelete },
-      ]);
-    }
+    setShowDeleteMonthConfirm(true);
+  };
+
+  const confirmDeleteMonth = () => {
+    deleteMonth(id);
+    setShowDeleteMonthConfirm(false);
+    router.back();
   };
 
   const handleSaveBudget = async () => {
@@ -527,6 +537,45 @@ export default function MonthDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Delete Expense Dialog ── */}
+      <CustomConfirmDialog
+        visible={showDeleteExpenseConfirm}
+        title="حذف المصروف"
+        message="هل أنت متأكد من حذف هذا المصروف؟"
+        confirmText="حذف"
+        cancelText="إلغاء"
+        isDangerous={true}
+        onConfirm={confirmDeleteExpense}
+        onCancel={() => { setShowDeleteExpenseConfirm(false); setSelectedDeleteExpenseId(null); }}
+        colors={C}
+      />
+
+      {/* ── Delete Transaction Dialog ── */}
+      <CustomConfirmDialog
+        visible={showDeleteTransactionConfirm}
+        title="حذف الحركة"
+        message="هل أنت متأكد؟ سيتم عكس تأثير هذه الحركة على الميزانية."
+        confirmText="حذف"
+        cancelText="إلغاء"
+        isDangerous={true}
+        onConfirm={confirmDeleteTransaction}
+        onCancel={() => { setShowDeleteTransactionConfirm(false); setSelectedDeleteTxId(null); }}
+        colors={C}
+      />
+
+      {/* ── Delete Month Dialog ── */}
+      <CustomConfirmDialog
+        visible={showDeleteMonthConfirm}
+        title="حذف الشهر"
+        message="سيتم حذف جميع مصاريف هذا الشهر. هل أنت متأكد؟"
+        confirmText="حذف"
+        cancelText="إلغاء"
+        isDangerous={true}
+        onConfirm={confirmDeleteMonth}
+        onCancel={() => setShowDeleteMonthConfirm(false)}
+        colors={C}
+      />
     </View>
   );
 }
